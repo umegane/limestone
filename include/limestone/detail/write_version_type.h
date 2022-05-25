@@ -17,6 +17,25 @@
 
 namespace limestone::detail {
 
-    using write_version_type = std::size_t;
-    
+using epoch_t = std::int64_t;
+
+class write_version_type {
+  public:
+
+  private:
+    /**
+     * @brief For PITR and major write version
+     * 
+     */
+    epoch_t epoch_number_;
+        
+    /**
+     * @brief The order in the same epoch.
+     * @details bit layout:
+     * 1 bits: 0 - short tx, 1 - long tx.
+     * 63 bits: the order between short tx or long tx id.
+     */
+    std::uint64_t minor_write_version_;
+};
+
 } // namespace limestone::detail

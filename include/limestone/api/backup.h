@@ -30,7 +30,11 @@ public:
 
     bool wait_for_ready(std::size_t duration);
 
-    std::list<boost::filesystem::path> files();
+    std::list<boost::filesystem::path>& files();
+
+private:
+    
+    std::list<boost::filesystem::path> files_;
 
 };
 

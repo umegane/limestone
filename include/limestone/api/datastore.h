@@ -67,6 +67,16 @@ public:
 
     void recover(epoch_tag);
 
+private:
+
+    std::unique_ptr<log_channel> channel_{};
+
+    std::unique_ptr<backup> backup_{};
+
+    std::function<void(epoch_id_type)> persistent_callback_;
+
+    std::function<void(write_version_type)> snapshot_callback_;
+
 };
 
 } // namespace limestone::api

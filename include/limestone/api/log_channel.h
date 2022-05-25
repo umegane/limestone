@@ -18,6 +18,9 @@
 #include <string>
 #include <string_view>
 
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/fstream.hpp>
+
 #include <limestone/error_code.h>
 #include <limestone/detail/storage_id_type.h>
 #include <limestone/detail/write_version_type.h>
@@ -30,6 +33,9 @@ using namespace limestone::detail;
 class log_channel {
 public:
 
+    log_channel() = delete;
+    explicit log_channel(boost::filesystem::path location);
+
     void begin_session();
 
     void end_session();
@@ -39,6 +45,15 @@ public:
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version, std::list<large_object_input> large_objects);
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version);
 
+private:
+    
+    boost::filesystem::path location_;
+
+    boost::filesystem::path file_;
+
+    std::size_t num_{};
+
+    boost::filesystem::ofstream strm_;
 
 };
 
