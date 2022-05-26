@@ -15,26 +15,27 @@
  */
 #pragma once
 
-#include <list>
+namespace limestone::api {
 
-#include <limestone/detail/types.h>
-#include <limestone/detail/large_object_view.h>
+using epoch_t = std::int64_t;  // from shirakami/src/concurrency_control/silo/include/epoch.h
 
-namespace limestone::detail {
+class write_version_type {
+  public:
 
-class cursor {
-public:
-
-    bool next();
-
-    storage_id_type storage();
-
-    void key(std::string& buf);
-
-    void value(std::string& buf);
-
-    std::list<large_object_view> large_objects();
-    
+  private:
+    /**
+     * @brief For PITR and major write version
+     * 
+     */
+    epoch_t epoch_number_;
+        
+    /**
+     * @brief The order in the same epoch.
+     * @apis bit layout:
+     * 1 bits: 0 - short tx, 1 - long tx.
+     * 63 bits: the order between short tx or long tx id.
+     */
+    std::uint64_t minor_write_version_;
 };
 
-} // namespace limestone::detail
+} // namespace limestone::api

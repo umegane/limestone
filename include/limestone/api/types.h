@@ -15,23 +15,8 @@
  */
 #pragma once
 
-#include <string>
+namespace limestone::api {
 
-#include <boost/filesystem/path.hpp>
+using storage_id_type = std::size_t;
 
-namespace limestone::detail {
-
-class large_object_input {
-public:
-    
-    explicit large_object_input(std::string buffer);
-    explicit large_object_input(boost::filesystem::path path);
-    ~large_object_input();
-
-    void locate(boost::filesystem::path path);
-
-    void detach();
-
-};
-
-} // namespace limestone::detail
+} // namespace limestone::api

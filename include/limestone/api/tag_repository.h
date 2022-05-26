@@ -15,8 +15,24 @@
  */
 #pragma once
 
-namespace limestone::detail {
+#include <list>
+#include <string>
+#include <optional>
 
-    using storage_id_type = std::size_t;
+#include <limestone/api/epoch_tag.h>
+
+namespace limestone::api {
+
+class tag_repository {
+public:
+
+    std::list<epoch_tag> list();
+
+    void register_tag(std::string name, std::string comments);
+
+    std::optional<epoch_tag> find(std::string_view name);
+
+    void unregister_tag(std::string_view name);
+};
     
-} // namespace limestone::detail
+} // namespace limestone::api

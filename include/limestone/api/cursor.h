@@ -15,8 +15,26 @@
  */
 #pragma once
 
-namespace limestone::detail {
+#include <list>
 
-    using epoch_id_type = std::size_t;
+#include <limestone/api/types.h>
+#include <limestone/api/large_object_view.h>
+
+namespace limestone::api {
+
+class cursor {
+public:
+
+    bool next();
+
+    storage_id_type storage();
+
+    void key(std::string& buf);
+
+    void value(std::string& buf);
+
+    std::list<large_object_view> large_objects();
     
-} // namespace limestone::detail
+};
+
+} // namespace limestone::api

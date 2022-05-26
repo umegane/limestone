@@ -22,13 +22,11 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <limestone/error_code.h>
-#include <limestone/detail/storage_id_type.h>
-#include <limestone/detail/write_version_type.h>
-#include <limestone/detail/large_object_input.h>
+#include <limestone/api/storage_id_type.h>
+#include <limestone/api/write_version_type.h>
+#include <limestone/api/large_object_input.h>
 
 namespace limestone::api {
-
-using namespace limestone::detail;
 
 class log_channel {
 public:

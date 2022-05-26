@@ -22,15 +22,13 @@
 
 #include <limestone/api/backup.h>
 #include <limestone/api/log_channel.h>
-#include <limestone/detail/configuration.h>
-#include <limestone/detail/snapshot.h>
-#include <limestone/detail/epoch_id_type.h>
-#include <limestone/detail/write_version_type.h>
-#include <limestone/detail/tag_repository.h>
+#include <limestone/api/configuration.h>
+#include <limestone/api/snapshot.h>
+#include <limestone/api/epoch_id_type.h>
+#include <limestone/api/write_version_type.h>
+#include <limestone/api/tag_repository.h>
 
 namespace limestone::api {
-
-using namespace limestone::detail;
 
 class datastore {
 public:

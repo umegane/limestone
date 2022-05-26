@@ -15,12 +15,8 @@
  */
 #pragma once
 
-namespace limestone::detail {
+namespace limestone::api {
 
-class configuration {
-public:
-
-};
-
-} // namespace limestone::detail
-
+    using storage_id_type = std::size_t;
+    
+} // namespace limestone::api

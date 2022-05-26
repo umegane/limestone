@@ -15,16 +15,20 @@
  */
 #pragma once
 
-#include <istream>
+#include <string_view>
 
-namespace limestone::detail {
+#include <limestone/api/cursor.h>
 
-class large_object_view {
+namespace limestone::api {
+
+class snapshot {
 public:
+    
+    cursor get_cursor();
 
-    std::size_t size();
+    cursor find(storage_id_type storage_id, std::string_view entry_key);
 
-    std::iostream open();
+    cursor scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive);
 };
 
-} // namespace limestone::detail
+} // namespace limestone::api

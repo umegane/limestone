@@ -15,23 +15,12 @@
  */
 #pragma once
 
-#include <string_view>
-#include <chrono>
+namespace limestone::api {
 
-#include <limestone/detail/epoch_id_type.h>
-
-namespace limestone::detail {
-
-class epoch_tag {
+class configuration {
 public:
-    
-    std::string_view name();
 
-    std::string_view comments();
-
-    epoch_id_type epoch_id();
-
-    std::chrono::system_clock::time_point timestamp();
 };
-    
-} // namespace limestone::detail
+
+} // namespace limestone::api
+

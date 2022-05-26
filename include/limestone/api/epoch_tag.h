@@ -15,27 +15,23 @@
  */
 #pragma once
 
-namespace limestone::detail {
+#include <string_view>
+#include <chrono>
 
-using epoch_t = std::int64_t;
+#include <limestone/api/epoch_id_type.h>
 
-class write_version_type {
-  public:
+namespace limestone::api {
 
-  private:
-    /**
-     * @brief For PITR and major write version
-     * 
-     */
-    epoch_t epoch_number_;
-        
-    /**
-     * @brief The order in the same epoch.
-     * @details bit layout:
-     * 1 bits: 0 - short tx, 1 - long tx.
-     * 63 bits: the order between short tx or long tx id.
-     */
-    std::uint64_t minor_write_version_;
+class epoch_tag {
+public:
+    
+    std::string_view name();
+
+    std::string_view comments();
+
+    epoch_id_type epoch_id();
+
+    std::chrono::system_clock::time_point timestamp();
 };
-
-} // namespace limestone::detail
+    
+} // namespace limestone::api
