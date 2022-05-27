@@ -69,7 +69,6 @@ struct pointer_comp {
 
 class datastore {
 public:
-    
     datastore() = default;  // FIXME
     explicit datastore(configuration conf);
 
@@ -103,12 +102,10 @@ public:
 
     void recover(epoch_tag);
 
-    auto& log_channels() { return channels_; }  // for test purpose
+protected:
+    std::set<std::unique_ptr<log_channel>, pointer_comp<log_channel>> channels_{};
     
 private:
-
-    std::set<std::unique_ptr<log_channel>, pointer_comp<log_channel>> channels_{};
-
     std::unique_ptr<backup> backup_{};
 
     std::function<void(epoch_id_type)> persistent_callback_;

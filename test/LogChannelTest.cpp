@@ -20,7 +20,7 @@ namespace limestone::testing {
 
 class LogChannelTest : public ::testing::Test {
     virtual void SetUp() {
-        datastore_ = std::make_unique<limestone::api::datastore>();
+        datastore_ = std::make_unique<limestone::api::datastore_test>();
     }
 
     virtual void TearDown() {
@@ -28,7 +28,7 @@ class LogChannelTest : public ::testing::Test {
     }
 
 protected:
-    std::unique_ptr<limestone::api::datastore> datastore_{};
+    std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
 TEST_F(LogChannelTest, number) {

@@ -20,3 +20,12 @@
 #include <boost/filesystem/path.hpp>
 
 #include <limestone/api/datastore.h>
+
+namespace limestone::api {
+
+class datastore_test : public datastore {
+public:
+    auto& log_channels() { return channels_; }
+};
+
+} // namespace limestone::api
