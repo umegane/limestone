@@ -15,14 +15,14 @@
  */
 #include <sstream>
 #include <iomanip>
+#include <iostream>  // FIXME
 
 #include <limestone/api/log_channel.h>
 
 namespace limestone::api {
 
-using namespace limestone::detail;
-
 log_channel::log_channel(boost::filesystem::path location) : location_(location) {
+    std::cout << __func__ << ":" << location.string() << std::endl;
 }
 
 void log_channel::begin_session() {
@@ -31,6 +31,8 @@ void log_channel::begin_session() {
     file_ = ss.str();
 
     strm_.open(location_ / file_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+
+    std::cout << __func__ << ":" << std::endl;
 }
 
 void log_channel::end_session() {
@@ -41,6 +43,7 @@ void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[m
 }
 
 void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] std::string_view value, [[maybe_unused]] write_version_type write_version) {
+    std::cout << __func__ << ":" << storage_id << ":" << key.length() << ":" << value.length() << std::endl;
 }
 
 } // namespace limestone::api

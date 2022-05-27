@@ -33,6 +33,7 @@ namespace limestone::api {
 class datastore {
 public:
     
+    datastore() = default;  // FIXME
     explicit datastore(configuration conf);
 
     ~datastore();
@@ -75,6 +76,7 @@ private:
 
     std::function<void(write_version_type)> snapshot_callback_;
 
+    tag_repository tag_repository_{};
 };
 
 } // namespace limestone::api

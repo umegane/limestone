@@ -15,7 +15,8 @@
  */
 #pragma once
 
-#include <list>
+#include <unordered_map>
+#include <vector>
 #include <string>
 #include <optional>
 
@@ -26,13 +27,18 @@ namespace limestone::api {
 class tag_repository {
 public:
 
-    std::list<epoch_tag> list();
+    std::vector<epoch_tag>& list();
 
     void register_tag(std::string name, std::string comments);
 
     std::optional<epoch_tag> find(std::string_view name);
 
     void unregister_tag(std::string_view name);
+
+private:
+    std::unordered_map<std::string, epoch_tag> map_;
+    std::vector<epoch_tag> list_;
+
 };
-    
+
 } // namespace limestone::api

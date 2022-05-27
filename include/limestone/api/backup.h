@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#include <list>
+#include <vector>
 
 #include <boost/filesystem/path.hpp>
 
@@ -24,17 +24,17 @@ namespace limestone::api {
 class backup {
 public:
     
-    ~backup();
+    ~backup() = default;  // FIXME
     
     bool is_ready();
 
     bool wait_for_ready(std::size_t duration);
 
-    std::list<boost::filesystem::path>& files();
+    std::vector<boost::filesystem::path>& files();
 
 private:
     
-    std::list<boost::filesystem::path> files_;
+    std::vector<boost::filesystem::path> files_;
 
 };
 

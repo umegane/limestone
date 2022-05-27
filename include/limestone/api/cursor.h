@@ -15,9 +15,9 @@
  */
 #pragma once
 
-#include <list>
+#include <vector>
 
-#include <limestone/api/types.h>
+#include <limestone/api/storage_id_type.h>
 #include <limestone/api/large_object_view.h>
 
 namespace limestone::api {
@@ -33,7 +33,7 @@ public:
 
     void value(std::string& buf);
 
-    std::list<large_object_view> large_objects();
+    std::vector<large_object_view>& large_objects();
     
 };
 

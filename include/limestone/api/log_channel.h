@@ -31,7 +31,7 @@ namespace limestone::api {
 class log_channel {
 public:
 
-    log_channel() = delete;
+    log_channel() = default; // FIXME for test in shirakami
     explicit log_channel(boost::filesystem::path location);
 
     void begin_session();
@@ -40,7 +40,7 @@ public:
 
     void abort_session(error_code_type error_code, std::string message);
 
-    void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version, std::list<large_object_input> large_objects);
+    void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version, std::vector<large_object_input>& large_objects);
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version);
 
 private:

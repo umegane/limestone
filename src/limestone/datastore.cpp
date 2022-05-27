@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 #include <limestone/api/datastore.h>
+#include <iostream>  // FIXME
 
 namespace limestone::api {
-
-using namespace limestone::detail;
 
 datastore::datastore([[maybe_unused]] configuration conf) {}
 
@@ -32,6 +31,7 @@ void datastore::ready() {}
 std::shared_ptr<snapshot> datastore::shared_snapshot() { return nullptr; }
 
 log_channel& datastore::create_channel(boost::filesystem::path location) {
+    std::cout << __func__ << ":" << location.string() << std::endl;
     channel_ = std::make_unique<log_channel>(location);
     return *channel_;
 }
@@ -57,7 +57,9 @@ backup& datastore::begin_backup() {
     return *backup_;
 }
 
-// tag_repository& datastore::epoch_tag_repository() {}
+tag_repository& datastore::epoch_tag_repository() {
+    return tag_repository_;
+}
 
 void datastore::recover([[maybe_unused]] epoch_tag tag) {}
 
