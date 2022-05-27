@@ -19,9 +19,11 @@
 
 #include <limestone/api/log_channel.h>
 
+#include <limestone/api/datastore.h>
+
 namespace limestone::api {
 
-log_channel::log_channel(boost::filesystem::path location) : location_(location) {
+log_channel::log_channel(boost::filesystem::path location, datastore* envelope) : envelope_(envelope), location_(location) {
     std::cout << __func__ << ":" << location.string() << std::endl;
 }
 
@@ -37,6 +39,7 @@ void log_channel::begin_session() {
 
 void log_channel::end_session() {
     strm_.close();
+    envelope_->erase_log_channel(this);
 }
 
 void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[maybe_unused]] std::string message) {

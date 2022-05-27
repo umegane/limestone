@@ -32,13 +32,17 @@ std::shared_ptr<snapshot> datastore::shared_snapshot() { return nullptr; }
 
 log_channel& datastore::create_channel(boost::filesystem::path location) {
     std::cout << __func__ << ":" << location.string() << std::endl;
-    channel_ = std::make_unique<log_channel>(location);
-    return *channel_;
+    auto ch = std::make_unique<log_channel>(location, this);
+    auto& rv = *ch;
+    channels_.emplace(std::move(ch));
+    return rv;
 }
 
 epoch_id_type datastore::last_epoch() { return 0; }
 
-void datastore::switch_epoch([[maybe_unused]] epoch_id_type epoch_id) {}
+void datastore::switch_epoch(epoch_id_type epoch_id) {
+    std::cout << __func__ << ":" << epoch_id << std::endl;
+}
 
 void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) {
     persistent_callback_ = callback;
@@ -62,5 +66,11 @@ tag_repository& datastore::epoch_tag_repository() {
 }
 
 void datastore::recover([[maybe_unused]] epoch_tag tag) {}
+
+void datastore::erase_log_channel(log_channel* lc) {
+    if (auto itr = channels_.find(lc); itr != channels_.end()) {
+        channels_.erase(itr);
+    }
+}
 
 } // namespace limestone::api

@@ -28,11 +28,13 @@
 
 namespace limestone::api {
 
+class datastore;
+
 class log_channel {
 public:
 
     log_channel() = default; // FIXME for test in shirakami
-    explicit log_channel(boost::filesystem::path location);
+    log_channel(boost::filesystem::path location, datastore* envelope);
 
     void begin_session();
 
@@ -45,6 +47,8 @@ public:
 
 private:
     
+    datastore* envelope_;
+
     boost::filesystem::path location_;
 
     boost::filesystem::path file_;
