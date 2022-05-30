@@ -31,11 +31,16 @@ protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-TEST_F(LogChannelTest, number) {
-    limestone::api::log_channel& channel1 = datastore_->create_channel(boost::filesystem::path("1"));
-    limestone::api::log_channel& channel2 = datastore_->create_channel(boost::filesystem::path("2"));
-    limestone::api::log_channel& channel3 = datastore_->create_channel(boost::filesystem::path("3"));
-    limestone::api::log_channel& channel4 = datastore_->create_channel(boost::filesystem::path("4"));
+TEST_F(LogChannelTest, name) {
+    limestone::api::log_channel& channel = datastore_->create_channel(boost::filesystem::path("/tmp"));
+    EXPECT_EQ(channel.file_path().string(), "/tmp/pwal_0000");
+}
+
+TEST_F(LogChannelTest, number_and_backup) {
+    limestone::api::log_channel& channel1 = datastore_->create_channel(boost::filesystem::path("/tmp"));
+    limestone::api::log_channel& channel2 = datastore_->create_channel(boost::filesystem::path("/tmp"));
+    limestone::api::log_channel& channel3 = datastore_->create_channel(boost::filesystem::path("/tmp"));
+    limestone::api::log_channel& channel4 = datastore_->create_channel(boost::filesystem::path("/tmp"));
 
     channel1.begin_session();
     channel2.begin_session();
@@ -49,7 +54,16 @@ TEST_F(LogChannelTest, number) {
     channel3.end_session();
     channel4.end_session();
 
-    EXPECT_TRUE(datastore_->log_channels().empty());
+    EXPECT_EQ(datastore_->log_channels().size(), 4);
+
+    auto backup = datastore_->begin_backup();
+    auto files = backup.files();
+
+    EXPECT_EQ(files.size(), 4);
+    EXPECT_EQ(files.at(0).string(), "/tmp/pwal_0000");
+    EXPECT_EQ(files.at(1).string(), "/tmp/pwal_0001");
+    EXPECT_EQ(files.at(2).string(), "/tmp/pwal_0002");
+    EXPECT_EQ(files.at(3).string(), "/tmp/pwal_0003");
 }
 
 }  // namespace limestone::testing

@@ -19,10 +19,14 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include <limestone/api/log_channel.h>
+
 namespace limestone::api {
 
 class backup {
 public:
+
+    explicit backup(std::vector<std::unique_ptr<log_channel>>& log_channels);
     
     ~backup() = default;  // FIXME
     

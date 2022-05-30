@@ -13,20 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-
-#include <boost/filesystem/path.hpp>
+#include <limestone/api/backup.h>
 
 namespace limestone::api {
 
-class configuration {
-public:
-    configuration();
-    configuration(std::vector<boost::filesystem::path> data_locations, boost::filesystem::path metadata_location);
+backup::backup(std::vector<std::unique_ptr<log_channel>>& log_channels) {
+    for(auto& e : log_channels) {
+        files_.emplace_back(e->file_path());
+    }
+}
 
-private:
-    std::vector<boost::filesystem::path> data_locations{};
-    boost::filesystem::path metadata_location{};
-};
+bool backup::is_ready() {
+    return true;  // FIXME
+}
+
+bool backup::wait_for_ready([[maybe_unused]] std::size_t duration) {
+    return true;  // FIXME
+}
+
+std::vector<boost::filesystem::path>& backup::files() {
+    return files_;
+}
+
 
 } // namespace limestone::api

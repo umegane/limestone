@@ -19,6 +19,7 @@ file(GLOB TEST_SOURCES
 register_tests(
     TARGET limestone
     DEPENDS
+      limestone-api
       Boost::filesystem
       glog::glog
       gflags::gflags

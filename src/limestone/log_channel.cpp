@@ -23,23 +23,22 @@
 
 namespace limestone::api {
 
-log_channel::log_channel(boost::filesystem::path location, datastore* envelope) : envelope_(envelope), location_(location) {
-    std::cout << __func__ << ":" << location.string() << std::endl;
+log_channel::log_channel(boost::filesystem::path location, std::size_t id) : location_(location), id_(id) {
+
+    std::stringstream ss;
+    ss << "pwal_" << std::setw(4) << std::setfill('0') << std::dec << id_;
+    file_ = ss.str();
+    std::cout << __func__ << ":" << (location_ / file_).string() << std::endl;
 }
 
 void log_channel::begin_session() {
-    std::stringstream ss;
-    ss << std::setw(4) << std::setfill('0') << std::hex << num_;
-    file_ = ss.str();
-
     strm_.open(location_ / file_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
 
-    std::cout << __func__ << ":" << std::endl;
+    std::cout << __func__ << ":" << location_.string() << ":" << file_.string() << std::endl;
 }
 
 void log_channel::end_session() {
     strm_.close();
-    envelope_->erase_log_channel(this);
 }
 
 void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[maybe_unused]] std::string message) {
@@ -47,6 +46,10 @@ void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[m
 
 void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] std::string_view value, [[maybe_unused]] write_version_type write_version) {
     std::cout << __func__ << ":" << storage_id << ":" << key.length() << ":" << value.length() << std::endl;
+}
+
+boost::filesystem::path log_channel::file_path() {
+    return location_ / file_;
 }
 
 } // namespace limestone::api

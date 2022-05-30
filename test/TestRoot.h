@@ -25,7 +25,8 @@ namespace limestone::api {
 
 class datastore_test : public datastore {
 public:
-    auto& log_channels() { return channels_; }
+    datastore_test() : datastore(configuration()) {}
+    auto& log_channels() { return log_channels_; }
 };
 
 } // namespace limestone::api

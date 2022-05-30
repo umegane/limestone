@@ -18,8 +18,9 @@
 
 namespace limestone::api {
 
-datastore::datastore([[maybe_unused]] configuration conf) {
-}
+datastore::datastore() : datastore(configuration()) {}
+
+datastore::datastore([[maybe_unused]] configuration conf) {}
 
 datastore::~datastore() {}
 
@@ -32,11 +33,11 @@ void datastore::ready() {}
 std::shared_ptr<snapshot> datastore::shared_snapshot() { return nullptr; }
 
 log_channel& datastore::create_channel(boost::filesystem::path location) {
-    std::cout << __func__ << ":" << location.string() << std::endl;
-    auto ch = std::make_unique<log_channel>(location, this);
-    auto& rv = *ch;
-    channels_.emplace(std::move(ch));
-    return rv;
+    std::lock_guard<std::mutex> lock(mtx_);
+    
+    auto id = log_channel_id_.fetch_add(1);
+    log_channels_.emplace_back(std::make_unique<log_channel>(location, id));
+    return *log_channels_.at(id);
 }
 
 epoch_id_type datastore::last_epoch() { return 0; }
@@ -58,7 +59,7 @@ void datastore::add_snapshot_callback(std::function<void(write_version_type)> ca
 // std::future<void> datastore::shutdown() {}
 
 backup& datastore::begin_backup() {
-    backup_ = std::make_unique<backup>();
+    backup_ = std::make_unique<backup>(log_channels_);
     return *backup_;
 }
 
@@ -67,11 +68,5 @@ tag_repository& datastore::epoch_tag_repository() {
 }
 
 void datastore::recover([[maybe_unused]] epoch_tag tag) {}
-
-void datastore::erase_log_channel(log_channel* lc) {
-    if (auto itr = channels_.find(lc); itr != channels_.end()) {
-        channels_.erase(itr);
-    }
-}
 
 } // namespace limestone::api

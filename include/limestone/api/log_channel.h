@@ -28,13 +28,11 @@
 
 namespace limestone::api {
 
-class datastore;
-
 class log_channel {
 public:
 
     log_channel() = default; // FIXME for test in shirakami
-    log_channel(boost::filesystem::path location, datastore* envelope);
+    log_channel(boost::filesystem::path location, std::size_t id);
 
     void begin_session();
 
@@ -45,18 +43,16 @@ public:
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version, std::vector<large_object_input>& large_objects);
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version);
 
-private:
-    
-    datastore* envelope_;
+    boost::filesystem::path file_path();
 
+private:
     boost::filesystem::path location_;
 
     boost::filesystem::path file_;
 
-    std::size_t num_{};
+    std::size_t id_{};
 
     boost::filesystem::ofstream strm_;
-
 };
 
 } // namespace limestone::api
