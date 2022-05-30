@@ -13,33 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#include <limestone/api/snapshot.h>
 
-#include <vector>
+namespace limestone::api {  // FIXME fill implementation
 
-#include <limestone/api/storage_id_type.h>
-#include <limestone/api/large_object_view.h>
+cursor& snapshot::get_cursor() {
+    return cursor_;
+}
 
-namespace limestone::api {
+cursor& snapshot::find([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key) {
+    return cursor_;
+}
 
-class cursor {
-public:
-    bool next();
-
-    storage_id_type storage();
-
-    void key(std::string& buf);
-
-    void value(std::string& buf);
-
-    std::vector<large_object_view>& large_objects();
-
-private:
-    std::vector<large_object_view> large_objects_{};
-    storage_id_type storage_id_type_;  // FIXME
-    
-    std::string buf_key_{};  // FIXME
-    std::string buf_value_{};  // FIXME
-};
+cursor& snapshot::scan([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key, [[maybe_unused]] bool inclusive) {
+    return cursor_;
+}
 
 } // namespace limestone::api

@@ -23,12 +23,16 @@ namespace limestone::api {
 
 class snapshot {
 public:
+    snapshot() = default;
     
-    cursor get_cursor();
+    cursor& get_cursor();
 
-    cursor find(storage_id_type storage_id, std::string_view entry_key);
+    cursor& find(storage_id_type storage_id, std::string_view entry_key);
 
-    cursor scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive);
+    cursor& scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive);
+
+private:
+    cursor cursor_{};
 };
 
 } // namespace limestone::api

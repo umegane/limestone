@@ -13,33 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-
-#include <vector>
-
-#include <limestone/api/storage_id_type.h>
-#include <limestone/api/large_object_view.h>
+#include <limestone/api/configuration.h>
 
 namespace limestone::api {
 
-class cursor {
-public:
-    bool next();
+configuration::configuration(boost::filesystem::path location) : location_(location) {
+}
 
-    storage_id_type storage();
-
-    void key(std::string& buf);
-
-    void value(std::string& buf);
-
-    std::vector<large_object_view>& large_objects();
-
-private:
-    std::vector<large_object_view> large_objects_{};
-    storage_id_type storage_id_type_;  // FIXME
-    
-    std::string buf_key_{};  // FIXME
-    std::string buf_value_{};  // FIXME
-};
+boost::filesystem::path configuration::location() const {
+    return location_;
+}
 
 } // namespace limestone::api

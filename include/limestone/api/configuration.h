@@ -15,12 +15,18 @@
  */
 #pragma once
 
+#include <boost/filesystem/path.hpp>
+
 namespace limestone::api {
 
 class configuration {
 public:
+    explicit configuration(boost::filesystem::path location);
 
+    boost::filesystem::path location() const;
+
+private:
+    const boost::filesystem::path location_;    
 };
 
 } // namespace limestone::api
-

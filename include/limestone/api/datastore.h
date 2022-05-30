@@ -116,8 +116,9 @@ private:
 
     void erase_log_channel(log_channel* lc);
 
-    friend class log_channel;
+    const boost::filesystem::path location_;
 
+    friend class log_channel;
 };
 
 } // namespace limestone::api
