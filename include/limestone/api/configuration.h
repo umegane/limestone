@@ -21,12 +21,7 @@ namespace limestone::api {
 
 class configuration {
 public:
-    explicit configuration(boost::filesystem::path location);
-
-    boost::filesystem::path location() const;
-
-private:
-    const boost::filesystem::path location_;    
+    configuration();
 };
 
 } // namespace limestone::api

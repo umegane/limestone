@@ -116,8 +116,6 @@ private:
 
     void erase_log_channel(log_channel* lc);
 
-    const boost::filesystem::path location_;
-
     friend class log_channel;
 };
 

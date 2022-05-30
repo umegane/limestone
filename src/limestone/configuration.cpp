@@ -17,11 +17,7 @@
 
 namespace limestone::api {
 
-configuration::configuration(boost::filesystem::path location) : location_(location) {
-}
-
-boost::filesystem::path configuration::location() const {
-    return location_;
+configuration::configuration() {
 }
 
 } // namespace limestone::api

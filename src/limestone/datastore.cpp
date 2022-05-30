@@ -18,7 +18,7 @@
 
 namespace limestone::api {
 
-datastore::datastore(configuration conf) : location_(conf.location()) {
+datastore::datastore([[maybe_unused]] configuration conf) {
 }
 
 datastore::~datastore() {}
