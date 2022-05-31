@@ -23,6 +23,7 @@ using epoch_t = std::int64_t;  // from shirakami/src/concurrency_control/silo/in
 
 class write_version_type {
   public:
+    write_version_type();
     write_version_type(epoch_t epoch_number, std::uint64_t minor_write_version);
 
 private:

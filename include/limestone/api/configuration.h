@@ -25,8 +25,8 @@ public:
     configuration(std::vector<boost::filesystem::path> data_locations, boost::filesystem::path metadata_location);
 
 private:
-    std::vector<boost::filesystem::path> data_locations{};
-    boost::filesystem::path metadata_location{};
+    std::vector<boost::filesystem::path> data_locations_{};
+    boost::filesystem::path metadata_location_{};
 };
 
 } // namespace limestone::api

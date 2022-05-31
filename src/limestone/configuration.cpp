@@ -19,5 +19,8 @@ namespace limestone::api {
 
 configuration::configuration() {
 }
+configuration::configuration(std::vector<boost::filesystem::path> data_locations, boost::filesystem::path metadata_location)
+    : data_locations_(data_locations), metadata_location_(metadata_location) {
+}
 
 } // namespace limestone::api

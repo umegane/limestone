@@ -17,6 +17,7 @@
 
 namespace limestone::api {
 
+write_version_type::write_version_type() {}  // FIXME set suitable value to epoch_number_ and minor_write_version_
 write_version_type::write_version_type(epoch_t epoch_number, std::uint64_t minor_write_version)
     : epoch_number_(epoch_number), minor_write_version_(minor_write_version) {
 }
