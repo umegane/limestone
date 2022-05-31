@@ -16,6 +16,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 
 #include <boost/filesystem/path.hpp>
 
@@ -26,7 +27,7 @@ namespace limestone::api {
 class backup {
 public:
 
-    explicit backup(std::vector<std::unique_ptr<log_channel>>& log_channels);
+    explicit backup(std::set<boost::filesystem::path>& files);
     
     ~backup() = default;  // FIXME
     

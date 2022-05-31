@@ -17,9 +17,9 @@
 
 namespace limestone::api {
 
-backup::backup(std::vector<std::unique_ptr<log_channel>>& log_channels) {
-    for(auto& e : log_channels) {
-        files_.emplace_back(e->file_path());
+backup::backup(std::set<boost::filesystem::path>& files) {
+    for(auto& e : files) {
+        files_.emplace_back(e);
     }
 }
 

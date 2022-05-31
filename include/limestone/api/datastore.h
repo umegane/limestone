@@ -19,6 +19,7 @@
 #include <future>
 #include <atomic>
 #include <vector>
+#include <set>
 #include <mutex>
 
 #include <boost/filesystem/path.hpp>
@@ -69,10 +70,14 @@ public:
     void recover(epoch_tag);
 
 protected:
-    std::vector<std::unique_ptr<log_channel>> log_channels_;
+    std::vector<std::unique_ptr<log_channel>> log_channels_;  // place in protectes region for tests
     
 private:
+    epoch_id_type epoch_id_{};
+
     std::unique_ptr<backup> backup_{};
+
+    std::unique_ptr<snapshot> snapshot_{};
 
     std::function<void(epoch_id_type)> persistent_callback_;
 
@@ -82,7 +87,13 @@ private:
 
     std::atomic_ulong log_channel_id_{};
 
+    std::set<boost::filesystem::path> files_{};
+
     std::mutex mtx_{};
+
+    void add_file(boost::filesystem::path file);
+
+    friend class log_channel;
 };
 
 } // namespace limestone::api

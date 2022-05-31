@@ -23,29 +23,40 @@
 
 namespace limestone::api {
 
-log_channel::log_channel(boost::filesystem::path location, std::size_t id) : location_(location), id_(id) {
-
+log_channel::log_channel(boost::filesystem::path location, std::size_t id, datastore* envelope)
+    : envelope_(envelope), location_(location), id_(id)
+{
     std::stringstream ss;
     ss << "pwal_" << std::setw(4) << std::setfill('0') << std::dec << id_;
     file_ = ss.str();
-    std::cout << __func__ << ":" << (location_ / file_).string() << std::endl;
 }
 
 void log_channel::begin_session() {
-    strm_.open(location_ / file_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
-
-    std::cout << __func__ << ":" << location_.string() << ":" << file_.string() << std::endl;
+    auto log_file = file_path();
+    strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+    envelope_->add_file(log_file);
 }
 
 void log_channel::end_session() {
+    strm_.flush();
     strm_.close();
 }
 
 void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[maybe_unused]] std::string message) {
 }
 
-void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] std::string_view value, [[maybe_unused]] write_version_type write_version) {
-    std::cout << __func__ << ":" << storage_id << ":" << key.length() << ":" << value.length() << std::endl;
+void log_channel::add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version) {
+    std::int32_t key_len = key.length();
+    strm_.write((char*)&key_len, sizeof(std::int32_t));
+    std::int32_t value_len = value.length();
+    strm_.write((char*)&value_len, sizeof(std::int32_t));
+
+    strm_.write((char*)&write_version.epoch_number_, sizeof(epoch_t));
+    strm_.write((char*)&write_version.minor_write_version_, sizeof(std::uint64_t));
+
+    strm_.write((char*)&storage_id, sizeof(storage_id_type));
+    strm_.write((char*)key.data(), key_len);
+    strm_.write((char*)value.data(), value_len);
 }
 
 boost::filesystem::path log_channel::file_path() {

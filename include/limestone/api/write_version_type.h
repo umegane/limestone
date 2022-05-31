@@ -40,6 +40,8 @@ private:
      * 63 bits: the order between short tx or long tx id.
      */
     std::uint64_t minor_write_version_;
+
+    friend class log_channel;
 };
 
 } // namespace limestone::api
