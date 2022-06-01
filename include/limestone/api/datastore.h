@@ -42,6 +42,7 @@ public:
     ~datastore();
 
     void recover();
+    void recover(std::string_view from, bool overwrite, std::string_view to);
 
     void ready();
 
@@ -90,6 +91,7 @@ private:
     std::set<boost::filesystem::path> files_{};
 
     std::mutex mtx_{};
+    std::mutex mtx_set_{};
 
     void add_file(boost::filesystem::path file);
 

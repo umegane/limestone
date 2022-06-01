@@ -28,6 +28,9 @@ datastore::datastore([[maybe_unused]] configuration conf) {}
 datastore::~datastore() {}
 
 void datastore::recover() {}
+void datastore::recover(std::string_view from, bool overwrite, std::string_view to) {
+    std::cout << __func__ << ":" << from << ":" << overwrite << ":" << to << std::endl;
+}
 
 void datastore::ready() {}
 
@@ -77,6 +80,8 @@ tag_repository& datastore::epoch_tag_repository() {
 void datastore::recover([[maybe_unused]] epoch_tag tag) {}
 
 void datastore::add_file(boost::filesystem::path file) {
+    std::lock_guard<std::mutex> lock(mtx_set_);
+
     files_.insert(file);
 }
 
