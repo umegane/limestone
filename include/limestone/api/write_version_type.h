@@ -41,7 +41,7 @@ private:
      */
     std::uint64_t minor_write_version_;
 
-    friend class log_channel;
+    friend class log_entry;
 };
 
 } // namespace limestone::api

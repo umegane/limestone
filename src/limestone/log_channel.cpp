@@ -20,6 +20,7 @@
 #include <limestone/api/log_channel.h>
 
 #include <limestone/api/datastore.h>
+#include <limestone/api/log_entry.h>
 
 namespace limestone::api {
 
@@ -46,17 +47,7 @@ void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[m
 }
 
 void log_channel::add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version) {
-    std::int32_t key_len = key.length();
-    strm_.write((char*)&key_len, sizeof(std::int32_t));
-    std::int32_t value_len = value.length();
-    strm_.write((char*)&value_len, sizeof(std::int32_t));
-
-    strm_.write((char*)&write_version.epoch_number_, sizeof(epoch_t));
-    strm_.write((char*)&write_version.minor_write_version_, sizeof(std::uint64_t));
-
-    strm_.write((char*)&storage_id, sizeof(storage_id_type));
-    strm_.write((char*)key.data(), key_len);
-    strm_.write((char*)value.data(), value_len);
+    log_entry::write(strm_, storage_id, key, value, write_version);
 }
 
 boost::filesystem::path log_channel::file_path() {
