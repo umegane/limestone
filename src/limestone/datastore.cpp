@@ -31,8 +31,8 @@ void datastore::recover() {}
 
 void datastore::ready() {}
 
-snapshot& datastore::get_snapshot() {
-    return *snapshot_;
+snapshot* datastore::get_snapshot() {
+    return snapshot_.get();
 }
 
 std::shared_ptr<snapshot> datastore::shared_snapshot() { return nullptr; }

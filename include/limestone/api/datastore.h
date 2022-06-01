@@ -45,7 +45,7 @@ public:
 
     void ready();
 
-    snapshot& get_snapshot();
+    snapshot* get_snapshot();
 
     std::shared_ptr<snapshot> shared_snapshot();
 
