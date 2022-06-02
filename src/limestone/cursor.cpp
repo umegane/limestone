@@ -17,20 +17,27 @@
 
 namespace limestone::api {
 
-bool cursor::next() {  // FIXME
-    return false;
+cursor::cursor(boost::filesystem::ifstream& istrm) : istrm_(istrm) {
 }
 
-storage_id_type cursor::storage() {  // FIXME
-    return storage_id_type_;
+bool cursor::next() {
+    if (istrm_.eof()) {
+        return false;
+    }
+    log_entry_.read(istrm_);
+    return true;
 }
 
-void cursor::key(std::string& buf) {  // FIXME
-    buf = buf_key_;
+storage_id_type cursor::storage() {
+    return log_entry_.storage();
 }
 
-void cursor::value(std::string& buf) {  // FIXME
-    buf = buf_value_;
+void cursor::key(std::string& buf) {
+    log_entry_.key(buf);
+}
+
+void cursor::value(std::string& buf) {
+    log_entry_.value(buf);
 }
 
 std::vector<large_object_view>& cursor::large_objects() {

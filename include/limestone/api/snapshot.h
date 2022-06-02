@@ -15,7 +15,11 @@
  */
 #pragma once
 
+#include <memory>
 #include <string_view>
+
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <limestone/api/cursor.h>
 
@@ -23,7 +27,11 @@ namespace limestone::api {
 
 class snapshot {
 public:
+    constexpr static const char* subdirectory_name_ = "data";
+    constexpr static const char* file_name_ = "snapshot";
+
     snapshot() = default;
+    explicit snapshot(boost::filesystem::path dir);
     
     cursor& get_cursor();
 
@@ -32,7 +40,17 @@ public:
     cursor& scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive);
 
 private:
-    cursor cursor_{};
+    std::unique_ptr<cursor> cursor_{};
+
+    boost::filesystem::path dir_{};
+
+    boost::filesystem::ofstream ostrm_{};
+    boost::filesystem::ifstream istrm_{};
+
+    boost::filesystem::ofstream& open_ofstream();
+    boost::filesystem::ifstream& open_ifstream();
+
+    friend class datastore;
 };
 
 } // namespace limestone::api

@@ -35,7 +35,10 @@ log_channel::log_channel(boost::filesystem::path location, std::size_t id, datas
 void log_channel::begin_session() {
     auto log_file = file_path();
     strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
-    envelope_->add_file(log_file);
+    if (!registered_) {
+        envelope_->add_file(log_file);
+        registered_ = true;
+    }
 }
 
 void log_channel::end_session() {

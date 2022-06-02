@@ -16,7 +16,11 @@
 #include <thread>
 #include <chrono>
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/foreach.hpp>
+
 #include <limestone/api/datastore.h>
+#include <limestone/api/log_entry.h>
 #include <iostream>  // FIXME
 
 namespace limestone::api {
@@ -28,8 +32,24 @@ datastore::datastore([[maybe_unused]] configuration conf) {}
 datastore::~datastore() {}
 
 void datastore::recover() {}
-void datastore::recover(std::string_view from, bool overwrite, std::string_view to) {
-    std::cout << __func__ << ":" << from << ":" << overwrite << ":" << to << std::endl;
+void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite, std::string_view to) {
+    auto from_dir = boost::filesystem::path(std::string(from));
+    auto to_dir = boost::filesystem::path(std::string(to));
+
+    snapshot_ = std::make_unique<snapshot>(to_dir);
+    auto& ostrm = snapshot_->open_ofstream();
+    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
+        if (!boost::filesystem::is_directory(p)) {
+            boost::filesystem::ifstream istrm;
+            istrm.open(p, std::ios_base::in | std::ios_base::binary);
+            while(!istrm.eof()) {
+                auto&& e = log_entry().read(istrm);
+                e.write(ostrm);
+            }
+            istrm.close();
+        }
+    }
+    ostrm.close();
 }
 
 void datastore::ready() {}

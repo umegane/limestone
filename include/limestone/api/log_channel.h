@@ -57,6 +57,9 @@ private:
     std::size_t id_{};
 
     boost::filesystem::ofstream strm_;
+
+    bool registered_{};
+
 };
 
 } // namespace limestone::api

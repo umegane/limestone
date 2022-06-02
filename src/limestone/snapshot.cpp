@@ -15,18 +15,44 @@
  */
 #include <limestone/api/snapshot.h>
 
+#include <iostream> // FIXME remove this
+#include <boost/filesystem.hpp>
+
 namespace limestone::api {  // FIXME fill implementation
 
+snapshot::snapshot(boost::filesystem::path dir) : dir_(dir / boost::filesystem::path(subdirectory_name_)) {
+    boost::system::error_code error;
+    const bool result_check = boost::filesystem::exists(dir_, error);
+    if (!result_check || error) {
+        const bool result_mkdir = boost::filesystem::create_directory(dir_, error);
+        if (!result_mkdir || error) {
+            std::cout << "fail to create directory" << std::endl;
+            std::abort();
+        }
+    }
+}
+
 cursor& snapshot::get_cursor() {
-    return cursor_;
+    cursor_ = std::make_unique<cursor>(open_ifstream());
+    return *cursor_;
 }
 
 cursor& snapshot::find([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key) {
-    return cursor_;
+    std::abort();  // FIXME should implement
 }
 
 cursor& snapshot::scan([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key, [[maybe_unused]] bool inclusive) {
-    return cursor_;
+    std::abort();  // FIXME should implement
 }
+
+boost::filesystem::ofstream& snapshot::open_ofstream() {
+    ostrm_.open(dir_ / boost::filesystem::path(file_name_), std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+    return ostrm_;
+}
+boost::filesystem::ifstream& snapshot::open_ifstream() {
+    istrm_.open(dir_ / boost::filesystem::path(file_name_), std::ios_base::in | std::ios_base::binary );
+    return istrm_;
+}
+
 
 } // namespace limestone::api

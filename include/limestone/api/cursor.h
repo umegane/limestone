@@ -17,13 +17,18 @@
 
 #include <vector>
 
+#include <boost/filesystem.hpp>
+
 #include <limestone/api/storage_id_type.h>
 #include <limestone/api/large_object_view.h>
+#include <limestone/api/log_entry.h>
 
 namespace limestone::api {
 
 class cursor {
 public:
+    cursor(boost::filesystem::ifstream& istrm);
+
     bool next();
 
     storage_id_type storage();
@@ -35,11 +40,9 @@ public:
     std::vector<large_object_view>& large_objects();
 
 private:
+    boost::filesystem::ifstream& istrm_;
+    log_entry log_entry_{};
     std::vector<large_object_view> large_objects_{};
-    storage_id_type storage_id_type_;  // FIXME
-    
-    std::string buf_key_{};  // FIXME
-    std::string buf_value_{};  // FIXME
 };
 
 } // namespace limestone::api
