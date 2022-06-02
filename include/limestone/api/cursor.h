@@ -15,19 +15,22 @@
  */
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include <boost/filesystem.hpp>
 
 #include <limestone/api/storage_id_type.h>
 #include <limestone/api/large_object_view.h>
-#include <limestone/api/log_entry.h>
 
 namespace limestone::api {
+
+class log_entry;
 
 class cursor {
 public:
     cursor(boost::filesystem::ifstream& istrm);
+    ~cursor();
 
     bool next();
 
@@ -41,7 +44,7 @@ public:
 
 private:
     boost::filesystem::ifstream& istrm_;
-    log_entry log_entry_{};
+    std::unique_ptr<log_entry> log_entry_;
     std::vector<large_object_view> large_objects_{};
 };
 

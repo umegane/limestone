@@ -17,6 +17,7 @@
 
 #include <string>
 #include <string_view>
+#include <iostream>  // FIXME
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -29,18 +30,8 @@ namespace limestone::api {
 class datastore;
 
 class log_entry {
-private:
-    friend class datastore;
-    friend class log_channel;
-    friend class snapshot;
-    friend class cursor;
-
+public:
     log_entry() = default;
-
-    storage_id_type& storage_id() { return storage_id_; }
-    std::string_view key() { return key_; }
-    std::string_view value() { return value_; }
-    write_version_type& write_version() { return write_version_; }
 
 // for writer
     void write(boost::filesystem::ofstream& strm) {
@@ -65,16 +56,16 @@ private:
     log_entry& read(boost::filesystem::ifstream& strm) {
         std::int32_t key_len;
         strm.read((char*)&key_len, sizeof(std::int32_t));
+        key_.resize(key_len);
         std::int32_t value_len;
         strm.read((char*)&value_len, sizeof(std::int32_t));
+        value_.resize(value_len);
 
         strm.read((char*)&write_version_.epoch_number_, sizeof(epoch_t));
         strm.read((char*)&write_version_.minor_write_version_, sizeof(std::uint64_t));
 
         strm.read((char*)&storage_id_, sizeof(storage_id_type));
-        key_.resize(key_len);
         strm.read((char*)key_.data(), key_len);
-        value_.resize(value_len);
         strm.read((char*)value_.data(), value_len);
 
         return *this;
@@ -90,6 +81,7 @@ private:
         buf = value_;
     }
 
+private:
     storage_id_type storage_id_{};
     std::string key_{};
     std::string value_{};

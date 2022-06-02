@@ -74,6 +74,8 @@ protected:
     std::vector<std::unique_ptr<log_channel>> log_channels_;  // place in protectes region for tests
     
 private:
+    boost::filesystem::path location_{};
+
     epoch_id_type epoch_id_{};
 
     std::unique_ptr<backup> backup_{};

@@ -20,7 +20,7 @@
 #include <limestone/api/log_channel.h>
 
 #include <limestone/api/datastore.h>
-#include <limestone/api/log_entry.h>
+#include "log_entry.h"
 
 namespace limestone::api {
 

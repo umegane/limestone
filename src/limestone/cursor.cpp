@@ -14,30 +14,36 @@
  * limitations under the License.
  */
 #include <limestone/api/cursor.h>
+#include "log_entry.h"
 
 namespace limestone::api {
 
-cursor::cursor(boost::filesystem::ifstream& istrm) : istrm_(istrm) {
+cursor::cursor(boost::filesystem::ifstream& istrm) : istrm_(istrm), log_entry_(std::make_unique<log_entry>()) {
+}
+cursor::~cursor() {
 }
 
 bool cursor::next() {
+    if (!istrm_.good()) {
+        return false;
+    }
     if (istrm_.eof()) {
         return false;
     }
-    log_entry_.read(istrm_);
+    log_entry_->read(istrm_);
     return true;
 }
 
 storage_id_type cursor::storage() {
-    return log_entry_.storage();
+    return log_entry_->storage();
 }
 
 void cursor::key(std::string& buf) {
-    log_entry_.key(buf);
+    log_entry_->key(buf);
 }
 
 void cursor::value(std::string& buf) {
-    log_entry_.value(buf);
+    log_entry_->value(buf);
 }
 
 std::vector<large_object_view>& cursor::large_objects() {

@@ -27,6 +27,8 @@ public:
 private:
     std::vector<boost::filesystem::path> data_locations_{};
     boost::filesystem::path metadata_location_{};
+
+    friend class datastore;
 };
 
 } // namespace limestone::api

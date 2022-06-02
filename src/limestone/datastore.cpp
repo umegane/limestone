@@ -20,14 +20,16 @@
 #include <boost/foreach.hpp>
 
 #include <limestone/api/datastore.h>
-#include <limestone/api/log_entry.h>
+#include "log_entry.h"
 #include <iostream>  // FIXME
 
 namespace limestone::api {
 
 datastore::datastore() : datastore(configuration()) {}
 
-datastore::datastore([[maybe_unused]] configuration conf) {}
+datastore::datastore([[maybe_unused]] configuration conf) {
+    location_ = conf.data_locations_.at(0);
+}
 
 datastore::~datastore() {}
 
@@ -55,6 +57,7 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite, 
 void datastore::ready() {}
 
 snapshot* datastore::get_snapshot() {
+    snapshot_ = std::make_unique<snapshot>(location_);
     return snapshot_.get();
 }
 
