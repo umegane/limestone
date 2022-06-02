@@ -60,6 +60,7 @@ private:
 
     bool registered_{};
 
+    write_version_type write_version_{};
 };
 
 } // namespace limestone::api

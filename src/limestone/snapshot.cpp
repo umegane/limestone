@@ -26,14 +26,16 @@ snapshot::snapshot(boost::filesystem::path dir) : dir_(dir / boost::filesystem::
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(dir_, error);
         if (!result_mkdir || error) {
-            std::cout << "fail to create directory" << std::endl;
+            std::cerr << "fail to create directory" << std::endl;  // FIXME use logger
             std::abort();
         }
     }
 }
 
 cursor& snapshot::get_cursor() {
-    cursor_ = std::make_unique<cursor>(open_ifstream());
+    if (!cursor_) {
+        cursor_ = std::make_unique<cursor>(open_ifstream());
+    }
     return *cursor_;
 }
 

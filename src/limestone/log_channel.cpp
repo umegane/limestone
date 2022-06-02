@@ -43,6 +43,7 @@ void log_channel::begin_session() {
 
 void log_channel::end_session() {
     strm_.flush();
+    envelope_->persistent_callback_(write_version_.epoch_number_);
     strm_.close();
 }
 
@@ -51,6 +52,7 @@ void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[m
 
 void log_channel::add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version) {
     log_entry::write(strm_, storage_id, key, value, write_version);
+    write_version_ = write_version;
 }
 
 boost::filesystem::path log_channel::file_path() {

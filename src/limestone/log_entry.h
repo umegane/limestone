@@ -44,7 +44,7 @@ public:
         std::int32_t value_len = value.length();
         strm.write((char*)&value_len, sizeof(std::int32_t));
 
-        strm.write((char*)&write_version.epoch_number_, sizeof(epoch_t));
+        strm.write((char*)&write_version.epoch_number_, sizeof(epoch_id_type));
         strm.write((char*)&write_version.minor_write_version_, sizeof(std::uint64_t));
 
         strm.write((char*)&storage_id, sizeof(storage_id_type));
@@ -53,22 +53,25 @@ public:
     }
 
 // for reader
-    log_entry& read(boost::filesystem::ifstream& strm) {
+    log_entry* read(boost::filesystem::ifstream& strm) {
         std::int32_t key_len;
         strm.read((char*)&key_len, sizeof(std::int32_t));
-        key_.resize(key_len);
         std::int32_t value_len;
         strm.read((char*)&value_len, sizeof(std::int32_t));
-        value_.resize(value_len);
 
-        strm.read((char*)&write_version_.epoch_number_, sizeof(epoch_t));
+        strm.read((char*)&write_version_.epoch_number_, sizeof(epoch_id_type));
         strm.read((char*)&write_version_.minor_write_version_, sizeof(std::uint64_t));
 
         strm.read((char*)&storage_id_, sizeof(storage_id_type));
+        key_.resize(key_len);
         strm.read((char*)key_.data(), key_len);
+        value_.resize(value_len);
         strm.read((char*)value_.data(), value_len);
 
-        return *this;
+        if (strm.eof()) {
+            return nullptr;
+        }
+        return this;
     }
 
     storage_id_type storage() {

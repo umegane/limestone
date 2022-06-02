@@ -45,8 +45,11 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite, 
             boost::filesystem::ifstream istrm;
             istrm.open(p, std::ios_base::in | std::ios_base::binary);
             while(!istrm.eof()) {
-                auto&& e = log_entry().read(istrm);
-                e.write(ostrm);
+                auto* e = log_entry().read(istrm);
+                if (!e) {  // eof should detect here
+                    break;
+                }
+                e->write(ostrm);
             }
             istrm.close();
         }

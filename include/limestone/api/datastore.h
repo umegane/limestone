@@ -35,6 +35,8 @@
 namespace limestone::api {
 
 class datastore {
+    friend class log_channel;
+
 public:
     datastore();
     explicit datastore(configuration conf);
@@ -96,8 +98,6 @@ private:
     std::mutex mtx_set_{};
 
     void add_file(boost::filesystem::path file);
-
-    friend class log_channel;
 };
 
 } // namespace limestone::api

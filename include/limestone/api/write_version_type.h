@@ -17,21 +17,25 @@
 
 #include <cstdint>
 
+#include <limestone/api/epoch_id_type.h>
+
+
 namespace limestone::api {
 
-using epoch_t = std::int64_t;  // from shirakami/src/concurrency_control/silo/include/epoch.h
-
 class write_version_type {
-  public:
+    friend class log_channel;
+    friend class log_entry;
+
+public:
     write_version_type();
-    write_version_type(epoch_t epoch_number, std::uint64_t minor_write_version);
+    write_version_type(epoch_id_type epoch_number, std::uint64_t minor_write_version);
 
 private:
     /**
      * @brief For PITR and major write version
      * 
      */
-    epoch_t epoch_number_;
+    epoch_id_type epoch_number_;
         
     /**
      * @brief The order in the same epoch.
@@ -40,8 +44,6 @@ private:
      * 63 bits: the order between short tx or long tx id.
      */
     std::uint64_t minor_write_version_;
-
-    friend class log_entry;
 };
 
 } // namespace limestone::api
