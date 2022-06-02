@@ -22,6 +22,8 @@
 
 namespace limestone::api {
 
+using epoch_t = std::int64_t;  // from shirakami/src/concurrency_control/silo/include/epoch.h
+
 class write_version_type {
     friend class log_channel;
     friend class log_entry;
