@@ -17,7 +17,6 @@
 
 #include <string>
 #include <string_view>
-#include <iostream>  // FIXME
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -38,7 +37,7 @@ public:
         write(strm, storage_id_, key_, value_, write_version_);
     }
 
-    static void write(boost::filesystem::ofstream& strm, storage_id_type& storage_id, std::string_view key, std::string_view value, write_version_type& write_version) {
+    static void write(boost::filesystem::ofstream& strm, storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version) {
         std::int32_t key_len = key.length();
         strm.write((char*)&key_len, sizeof(std::int32_t));
         std::int32_t value_len = value.length();
@@ -56,6 +55,10 @@ public:
     log_entry* read(boost::filesystem::ifstream& strm) {
         std::int32_t key_len;
         strm.read((char*)&key_len, sizeof(std::int32_t));
+        if (strm.eof()) {
+            return nullptr;
+        }
+        
         std::int32_t value_len;
         strm.read((char*)&value_len, sizeof(std::int32_t));
 
@@ -68,9 +71,6 @@ public:
         value_.resize(value_len);
         strm.read((char*)value_.data(), value_len);
 
-        if (strm.eof()) {
-            return nullptr;
-        }
         return this;
     }
 
