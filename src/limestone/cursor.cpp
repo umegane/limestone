@@ -18,9 +18,11 @@
 
 namespace limestone::api {
 
-cursor::cursor(boost::filesystem::ifstream& istrm) : istrm_(istrm), log_entry_(std::make_unique<log_entry>()) {
+cursor::cursor(boost::filesystem::path file) : log_entry_(std::make_unique<log_entry>()) {
+    istrm_.open(file, std::ios_base::in | std::ios_base::binary );
 }
 cursor::~cursor() {
+    istrm_.close();
 }
 
 bool cursor::next() {

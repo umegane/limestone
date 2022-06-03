@@ -34,7 +34,7 @@ snapshot::snapshot(boost::filesystem::path dir) : dir_(dir / boost::filesystem::
 
 cursor& snapshot::get_cursor() {
     if (!cursor_) {
-        cursor_ = std::make_unique<cursor>(open_ifstream());
+        cursor_ = std::make_unique<cursor>(file_path());
     }
     return *cursor_;
 }
@@ -47,14 +47,8 @@ cursor& snapshot::scan([[maybe_unused]] storage_id_type storage_id, [[maybe_unus
     std::abort();  // FIXME should implement
 }
 
-boost::filesystem::ofstream& snapshot::open_ofstream() {
-    ostrm_.open(dir_ / boost::filesystem::path(file_name_), std::ios_base::out | std::ios_base::app | std::ios_base::binary );
-    return ostrm_;
+boost::filesystem::path snapshot::file_path() {
+    return dir_ / boost::filesystem::path(file_name_);
 }
-boost::filesystem::ifstream& snapshot::open_ifstream() {
-    istrm_.open(dir_ / boost::filesystem::path(file_name_), std::ios_base::in | std::ios_base::binary );
-    return istrm_;
-}
-
 
 } // namespace limestone::api

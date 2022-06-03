@@ -18,6 +18,7 @@
 #include <memory>
 #include <vector>
 
+#include <boost/filesystem/path.hpp>
 #include <boost/filesystem.hpp>
 
 #include <limestone/api/storage_id_type.h>
@@ -29,7 +30,7 @@ class log_entry;
 
 class cursor {
 public:
-    cursor(boost::filesystem::ifstream& istrm);
+    cursor(boost::filesystem::path file);
     ~cursor();
 
     bool next();
@@ -43,7 +44,7 @@ public:
     std::vector<large_object_view>& large_objects();
 
 private:
-    boost::filesystem::ifstream& istrm_;
+    boost::filesystem::ifstream istrm_{};
     std::unique_ptr<log_entry> log_entry_;
     std::vector<large_object_view> large_objects_{};
 };

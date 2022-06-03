@@ -44,11 +44,7 @@ private:
 
     boost::filesystem::path dir_{};
 
-    boost::filesystem::ofstream ostrm_{};
-    boost::filesystem::ifstream istrm_{};
-
-    boost::filesystem::ofstream& open_ofstream();
-    boost::filesystem::ifstream& open_ifstream();
+    boost::filesystem::path file_path();
 
     friend class datastore;
 };

@@ -38,7 +38,8 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) 
     auto from_dir = boost::filesystem::path(std::string(from));
 
     snapshot_ = std::make_unique<snapshot>(location_);
-    auto& ostrm = snapshot_->open_ofstream();
+    boost::filesystem::ofstream ostrm{};
+    ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::app | std::ios_base::binary);
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (!boost::filesystem::is_directory(p)) {
             boost::filesystem::ifstream istrm;
