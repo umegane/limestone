@@ -34,23 +34,22 @@ datastore::datastore([[maybe_unused]] configuration conf) {
 datastore::~datastore() {}
 
 void datastore::recover() {}
-void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite, std::string_view to) {
+void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) {
     auto from_dir = boost::filesystem::path(std::string(from));
-    auto to_dir = boost::filesystem::path(std::string(to));
 
-    snapshot_ = std::make_unique<snapshot>(to_dir);
+    snapshot_ = std::make_unique<snapshot>(location_);
     auto& ostrm = snapshot_->open_ofstream();
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (!boost::filesystem::is_directory(p)) {
             boost::filesystem::ifstream istrm;
             istrm.open(p, std::ios_base::in | std::ios_base::binary);
-            while(!istrm.eof()) {
+            do {
                 auto* e = log_entry().read(istrm);
-                if (!e) {  // eof should detect here
+                if (!e) {
                     break;
                 }
                 e->write(ostrm);
-            }
+            } while(true);
             istrm.close();
         }
     }

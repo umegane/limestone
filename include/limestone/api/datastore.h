@@ -44,7 +44,7 @@ public:
     ~datastore();
 
     void recover();
-    void recover(std::string_view from, bool overwrite, std::string_view to);
+    void recover(std::string_view from, bool overwrite);
 
     void ready();
 
