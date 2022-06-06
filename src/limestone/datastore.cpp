@@ -29,6 +29,15 @@ datastore::datastore() : datastore(configuration()) {}
 
 datastore::datastore([[maybe_unused]] configuration conf) {
     location_ = conf.data_locations_.at(0);
+    boost::system::error_code error;
+    const bool result_check = boost::filesystem::exists(location_, error);
+    if (!result_check || error) {
+        const bool result_mkdir = boost::filesystem::create_directory(location_, error);
+        if (!result_mkdir || error) {
+            std::cerr << "fail to create directory" << std::endl;  // FIXME use logger
+            std::abort();
+        }
+    }
 }
 
 datastore::~datastore() {}
