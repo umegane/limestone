@@ -59,13 +59,7 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) 
         if (!boost::filesystem::is_directory(p)) {
             boost::filesystem::ifstream istrm;
             istrm.open(p, std::ios_base::in | std::ios_base::binary);
-            do {
-                auto* e = log_entry().read(istrm);
-                if (!e) {
-                    break;
-                }
-                e->write(ostrm);
-            } while(true);
+            for (log_entry e{}; e.read(istrm); e.write(ostrm));
             istrm.close();
         }
     }

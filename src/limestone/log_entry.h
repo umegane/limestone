@@ -52,11 +52,11 @@ public:
     }
 
 // for reader
-    log_entry* read(boost::filesystem::ifstream& strm) {
+    bool read(boost::filesystem::ifstream& strm) {
         std::int32_t key_len;
         strm.read((char*)&key_len, sizeof(std::int32_t));
         if (strm.eof()) {
-            return nullptr;
+            return false;
         }
         
         std::int32_t value_len;
@@ -71,7 +71,7 @@ public:
         value_.resize(value_len);
         strm.read((char*)value_.data(), value_len);
 
-        return this;
+        return true;
     }
 
     storage_id_type storage() {
