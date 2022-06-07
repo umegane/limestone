@@ -42,7 +42,13 @@ datastore::datastore([[maybe_unused]] configuration conf) {
 
 datastore::~datastore() {}
 
-void datastore::recover() {}
+void datastore::recover() {
+    snapshot_ = std::make_unique<snapshot>(location_);
+    auto file = snapshot_->file_path();
+    if (!boost::filesystem::exists(file)) {
+        recover(location_.string(), false);
+    }
+}
 void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) {
     auto from_dir = boost::filesystem::path(std::string(from));
 
