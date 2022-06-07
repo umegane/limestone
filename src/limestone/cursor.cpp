@@ -32,8 +32,7 @@ bool cursor::next() {
     if (istrm_.eof()) {
         return false;
     }
-    log_entry_->read(istrm_);
-    return true;
+    return log_entry_->read(istrm_) != nullptr;
 }
 
 storage_id_type cursor::storage() {

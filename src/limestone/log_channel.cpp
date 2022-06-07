@@ -43,7 +43,9 @@ void log_channel::begin_session() {
 
 void log_channel::end_session() {
     strm_.flush();
-    envelope_->persistent_callback_(write_version_.epoch_number_);
+    if (envelope_->persistent_callback_) {
+        envelope_->persistent_callback_(write_version_.epoch_number_);
+    }
     strm_.close();
 }
 

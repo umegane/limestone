@@ -19,8 +19,18 @@
 namespace limestone::testing {
 
 class LogChannelTest : public ::testing::Test {
+public:
     virtual void SetUp() {
-        datastore_ = std::make_unique<limestone::api::datastore_test>();
+        if (system("rm -f /tmp/pwal_000?") != 0) {
+            std::cerr << "cannot remove directory" << std::endl;
+        }
+
+        std::vector<boost::filesystem::path> data_locations{};
+        data_locations.emplace_back("/tmp");
+        boost::filesystem::path metadata_location{"/tmp"};
+        limestone::api::configuration conf(data_locations, metadata_location);
+
+        datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
     }
 
     virtual void TearDown() {
