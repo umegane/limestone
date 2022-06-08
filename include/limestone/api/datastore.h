@@ -39,7 +39,7 @@ class datastore {
 
 public:
     datastore();
-    explicit datastore(configuration& conf);
+    explicit datastore(configuration const& conf);
 
     ~datastore();
 

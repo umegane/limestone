@@ -25,6 +25,7 @@ class configuration {
 public:
     configuration();
     configuration(std::vector<boost::filesystem::path>& data_locations, boost::filesystem::path metadata_location);
+    configuration(std::vector<boost::filesystem::path>&& data_locations, boost::filesystem::path metadata_location);
 
 private:
     std::vector<boost::filesystem::path> data_locations_{};

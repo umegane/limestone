@@ -27,7 +27,7 @@ namespace limestone::api {
 
 datastore::datastore() {}
 
-datastore::datastore(configuration& conf) {
+datastore::datastore(configuration const& conf) {
     location_ = conf.data_locations_.at(0);
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
