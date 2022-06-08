@@ -98,4 +98,31 @@ TEST_F(LogAndRecoverTest, Recovery) {
     datastore_->shutdown();
 }
 
+TEST_F(LogAndRecoverTest, RecoveryInterruptDatastoreObjectReallocation) { // NOLINT
+    std::vector<boost::filesystem::path> data_locations{};
+    data_locations.emplace_back(data_location);
+    boost::filesystem::path metadata_location{"/tmp/metadata_location"};
+    limestone::api::configuration conf(data_locations, metadata_location);
+
+    datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
+
+    // recover and ready
+    datastore_->recover();
+    datastore_->ready();
+
+    // create snapshot
+    limestone::api::snapshot* ss{datastore_->get_snapshot()};
+    ASSERT_TRUE(ss->get_cursor().next()); // point first
+    std::string buf{};
+    ss->get_cursor().key(buf);
+    ASSERT_EQ(buf, "k");
+    ss->get_cursor().value(buf);
+    ASSERT_EQ(buf, "v");
+    ASSERT_EQ(ss->get_cursor().storage(), 2);
+    ASSERT_FALSE(ss->get_cursor().next()); // nothing
+
+    // cleanup
+    datastore_->shutdown();
+}
+
 }  // namespace limestone::testing
