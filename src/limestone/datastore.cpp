@@ -76,7 +76,7 @@ snapshot* datastore::get_snapshot() {
 std::shared_ptr<snapshot> datastore::shared_snapshot() { return nullptr; }
 
 log_channel& datastore::create_channel(boost::filesystem::path location) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard<std::mutex> lock(mtx_channel_);
     
     auto id = log_channel_id_.fetch_add(1);
     log_channels_.emplace_back(std::make_unique<log_channel>(location, id, this));
@@ -115,7 +115,7 @@ tag_repository& datastore::epoch_tag_repository() {
 void datastore::recover([[maybe_unused]] epoch_tag tag) {}
 
 void datastore::add_file(boost::filesystem::path file) {
-    std::lock_guard<std::mutex> lock(mtx_set_);
+    std::lock_guard<std::mutex> lock(mtx_files_);
 
     files_.insert(file);
 }
