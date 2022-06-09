@@ -21,7 +21,8 @@
 
 #include <limestone/api/datastore.h>
 #include "log_entry.h"
-#include <iostream>  // FIXME
+
+#include "glog/logging.h"
 
 namespace limestone::api {
 
@@ -34,7 +35,7 @@ datastore::datastore(configuration const& conf) {
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
-            std::cerr << "fail to create directory" << std::endl;  // FIXME use logger
+            LOG(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
             std::abort();
         }
     }
