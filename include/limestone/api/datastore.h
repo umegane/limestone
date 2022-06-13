@@ -21,6 +21,7 @@
 #include <vector>
 #include <set>
 #include <mutex>
+#include <atomic>
 
 #include <boost/filesystem/path.hpp>
 
@@ -179,7 +180,8 @@ protected:
 private:
     boost::filesystem::path location_{};
 
-    epoch_id_type epoch_id_{};
+    std::atomic_uint64_t epoch_id_switched_{};
+    std::atomic_uint64_t epoch_id_informed_{};
 
     std::unique_ptr<backup> backup_{};
 
@@ -191,7 +193,7 @@ private:
 
     tag_repository tag_repository_{};
 
-    std::atomic_ulong log_channel_id_{};
+    std::atomic_uint64_t log_channel_id_{};
 
     std::set<boost::filesystem::path> files_{};
 
@@ -199,6 +201,9 @@ private:
     std::mutex mtx_files_{};
 
     void add_file(boost::filesystem::path file);
+
+    void update_min_epoch_id(epoch_id_type old_epoch_id);
+    epoch_id_type search_min_epoch_id();
 };
 
 } // namespace limestone::api

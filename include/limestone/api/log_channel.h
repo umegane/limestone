@@ -17,6 +17,7 @@
 
 #include <string>
 #include <string_view>
+#include <atomic>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -31,8 +32,9 @@ namespace limestone::api {
 class datastore;
 
 class log_channel {
-public:
+    friend class datastore;
 
+public:
     log_channel() = default; // FIXME for test in shirakami
     log_channel(boost::filesystem::path location, std::size_t id, datastore* envelope);
 
@@ -61,6 +63,9 @@ private:
     bool registered_{};
 
     write_version_type write_version_{};
+
+    std::atomic_uint64_t current_epoch_id_{};
+    epoch_id_type new_epoch_id_{};
 };
 
 } // namespace limestone::api
