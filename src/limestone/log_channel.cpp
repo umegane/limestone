@@ -33,7 +33,11 @@ log_channel::log_channel(boost::filesystem::path location, std::size_t id, datas
 }
 
 void log_channel::begin_session() {
-    current_epoch_id_.store(envelope_->epoch_id_switched_.load());
+    do {
+        current_epoch_id_.store(envelope_->epoch_id_switched_.load());
+        std::atomic_thread_fence(std::memory_order_acq_rel);
+    } while (current_epoch_id_.load() != envelope_->epoch_id_switched_.load());
+
     auto log_file = file_path();
     strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
     if (!registered_) {

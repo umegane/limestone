@@ -87,8 +87,13 @@ log_channel& datastore::create_channel(boost::filesystem::path location) {
 epoch_id_type datastore::last_epoch() { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
 
 void datastore::switch_epoch(epoch_id_type new_epoch_id) {
-    epoch_id_type previous_epoch = static_cast<std::uint64_t>(epoch_id_switched_);
-    epoch_id_switched_.store(static_cast<std::uint64_t>(new_epoch_id));
+    auto neid = static_cast<std::uint64_t>(new_epoch_id);
+    if (neid == 0) {
+        LOG(WARNING) << "switch to epoch_id_type of " << neid << " is curious";
+    }
+
+    epoch_id_type previous_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
+    epoch_id_switched_.store(neid);
     update_min_epoch_id(previous_epoch);
 }
 
@@ -111,7 +116,7 @@ epoch_id_type datastore::search_min_epoch_id() {
     epoch_id_type min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
 
     for (const auto& e : log_channels_) {
-        auto lc_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
+        auto lc_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load() - 1);
         if (lc_epoch < min_epoch) {
             min_epoch = lc_epoch;
         }
