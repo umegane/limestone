@@ -33,7 +33,7 @@ log_channel::log_channel(boost::filesystem::path location, std::size_t id, datas
 }
 
 void log_channel::begin_session() {
-    new_epoch_id_ = static_cast<epoch_id_type>(envelope_->epoch_id_switched_.load());
+    current_epoch_id_.store(envelope_->epoch_id_switched_.load());
     auto log_file = file_path();
     strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
     if (!registered_) {
@@ -45,7 +45,7 @@ void log_channel::begin_session() {
 void log_channel::end_session() {
     strm_.flush();
     auto previous_epoch_id = static_cast<epoch_id_type>(current_epoch_id_.load());
-    current_epoch_id_.store(static_cast<std::uint64_t>(new_epoch_id_));
+    current_epoch_id_.store(UINT64_MAX);
     envelope_->update_min_epoch_id(previous_epoch_id);
     strm_.close();
 }

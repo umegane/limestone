@@ -17,6 +17,7 @@
 
 #include <string>
 #include <string_view>
+#include <cstdint>
 #include <atomic>
 
 #include <boost/filesystem/path.hpp>
@@ -64,8 +65,7 @@ private:
 
     write_version_type write_version_{};
 
-    std::atomic_uint64_t current_epoch_id_{};
-    epoch_id_type new_epoch_id_{};
+    std::atomic_uint64_t current_epoch_id_{UINT64_MAX};
 };
 
 } // namespace limestone::api
