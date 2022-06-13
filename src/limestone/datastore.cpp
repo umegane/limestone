@@ -84,7 +84,7 @@ log_channel& datastore::create_channel(boost::filesystem::path location) {
     return *log_channels_.at(id);
 }
 
-epoch_id_type datastore::last_epoch() { return 0; }
+epoch_id_type datastore::last_epoch() { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
 
 void datastore::switch_epoch(epoch_id_type new_epoch_id) {
     epoch_id_type previous_epoch = static_cast<std::uint64_t>(epoch_id_switched_);
