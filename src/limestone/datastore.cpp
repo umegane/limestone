@@ -92,22 +92,21 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) {
         LOG(WARNING) << "switch to epoch_id_type of " << neid << " is curious";
     }
 
-    epoch_id_type previous_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
     epoch_id_switched_.store(neid);
-    update_min_epoch_id(previous_epoch);
+    if (epoch_id_informed_.load() < (neid - 1)) {
+        update_min_epoch_id();
+    }
 }
 
-void datastore::update_min_epoch_id(epoch_id_type previous_epoch_id) {
-    std::uint64_t old_epoch_id = static_cast<std::uint64_t>(previous_epoch_id);
-    if (old_epoch_id == static_cast<epoch_id_type>(epoch_id_informed_.load())) {
-        std::uint64_t min_epoch = static_cast<std::uint64_t>(search_min_epoch_id());
-        while (old_epoch_id < min_epoch) {
-            if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, min_epoch)) {
-                if (persistent_callback_) {
-                    persistent_callback_(min_epoch);
-                }
-                return;
+void datastore::update_min_epoch_id() {
+    std::uint64_t min_epoch = static_cast<std::uint64_t>(search_min_epoch_id());
+    std::uint64_t old_epoch_id = epoch_id_informed_.load();
+    while (old_epoch_id < min_epoch) {
+        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, min_epoch)) {
+            if (persistent_callback_) {
+                persistent_callback_(min_epoch);
             }
+            return;
         }
     }
 }
@@ -116,12 +115,12 @@ epoch_id_type datastore::search_min_epoch_id() {
     epoch_id_type min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
 
     for (const auto& e : log_channels_) {
-        auto lc_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load() - 1);
+        auto lc_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
         if (lc_epoch < min_epoch) {
             min_epoch = lc_epoch;
         }
     }
-    return min_epoch;
+    return min_epoch - 1;
 }
 
 void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) {

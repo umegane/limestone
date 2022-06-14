@@ -15,7 +15,6 @@
  */
 #include <sstream>
 #include <iomanip>
-#include <iostream>  // FIXME
 
 #include <limestone/api/log_channel.h>
 
@@ -48,9 +47,7 @@ void log_channel::begin_session() {
 
 void log_channel::end_session() {
     strm_.flush();
-    auto previous_epoch_id = static_cast<epoch_id_type>(current_epoch_id_.load());
     current_epoch_id_.store(UINT64_MAX);
-    envelope_->update_min_epoch_id(previous_epoch_id);
     strm_.close();
 }
 

@@ -181,6 +181,7 @@ private:
     boost::filesystem::path location_{};
 
     std::atomic_uint64_t epoch_id_switched_{};
+
     std::atomic_uint64_t epoch_id_informed_{};
 
     std::unique_ptr<backup> backup_{};
@@ -202,7 +203,7 @@ private:
 
     void add_file(boost::filesystem::path file);
 
-    void update_min_epoch_id(epoch_id_type old_epoch_id);
+    void update_min_epoch_id();
     epoch_id_type search_min_epoch_id();
 };
 
