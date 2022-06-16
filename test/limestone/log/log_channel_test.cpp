@@ -18,11 +18,16 @@
 
 namespace limestone::testing {
 
+constexpr const char* location = "/tmp/log_channel_test";
+
 class log_channel_test : public ::testing::Test {
 public:
     virtual void SetUp() {
-        if (system("rm -f /tmp/pwal_000?") != 0) {
+        if (system("rm -rf /tmp//tmp/log_channel_test") != 0) {
             std::cerr << "cannot remove directory" << std::endl;
+        }
+        if (system("mkdir -p /tmp/log_channel_test") != 0) {
+            std::cerr << "cannot make directory" << std::endl;
         }
 
         std::vector<boost::filesystem::path> data_locations{};
@@ -35,6 +40,9 @@ public:
 
     virtual void TearDown() {
         datastore_ = nullptr;
+        if (system("rm -rf /tmp//tmp/log_channel_test") != 0) {
+            std::cerr << "cannot remove directory" << std::endl;
+        }
     }
 
 protected:
@@ -47,10 +55,10 @@ TEST_F(log_channel_test, name) {
 }
 
 TEST_F(log_channel_test, number_and_backup) {
-    limestone::api::log_channel& channel1 = datastore_->create_channel(boost::filesystem::path("/tmp"));
-    limestone::api::log_channel& channel2 = datastore_->create_channel(boost::filesystem::path("/tmp"));
-    limestone::api::log_channel& channel3 = datastore_->create_channel(boost::filesystem::path("/tmp"));
-    limestone::api::log_channel& channel4 = datastore_->create_channel(boost::filesystem::path("/tmp"));
+    limestone::api::log_channel& channel1 = datastore_->create_channel(boost::filesystem::path(location));
+    limestone::api::log_channel& channel2 = datastore_->create_channel(boost::filesystem::path(location));
+    limestone::api::log_channel& channel3 = datastore_->create_channel(boost::filesystem::path(location));
+    limestone::api::log_channel& channel4 = datastore_->create_channel(boost::filesystem::path(location));
 
     channel1.begin_session();
     channel2.begin_session();
@@ -70,10 +78,10 @@ TEST_F(log_channel_test, number_and_backup) {
     auto files = backup.files();
 
     EXPECT_EQ(files.size(), 4);
-    EXPECT_EQ(files.at(0).string(), "/tmp/pwal_0000");
-    EXPECT_EQ(files.at(1).string(), "/tmp/pwal_0001");
-    EXPECT_EQ(files.at(2).string(), "/tmp/pwal_0002");
-    EXPECT_EQ(files.at(3).string(), "/tmp/pwal_0003");
+    EXPECT_EQ(files.at(0).string(), std::string(location) + "/pwal_0000");
+    EXPECT_EQ(files.at(1).string(), std::string(location) + "/pwal_0001");
+    EXPECT_EQ(files.at(2).string(), std::string(location) + "/pwal_0002");
+    EXPECT_EQ(files.at(3).string(), std::string(location) + "/pwal_0003");
 }
 
 }  // namespace limestone::testing
