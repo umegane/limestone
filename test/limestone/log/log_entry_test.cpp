@@ -77,6 +77,10 @@ TEST_F(log_entry_test, write_and_read) {
     std::string buf_value;
     log_entry_.value(buf_value);
     EXPECT_EQ(buf_value, value);
+
+    limestone::api::write_version_type buf_version;
+    log_entry_.write_version(buf_version);
+    EXPECT_TRUE(buf_version == write_version);
 }
 
 TEST_F(log_entry_test, write_and_read_and_write_and_read) {
@@ -111,6 +115,10 @@ TEST_F(log_entry_test, write_and_read_and_write_and_read) {
     std::string buf_value;
     log_entry_.value(buf_value);
     EXPECT_EQ(buf_value, value);
+
+    limestone::api::write_version_type buf_version;
+    log_entry_.write_version(buf_version);
+    EXPECT_TRUE(buf_version == write_version);
 }
 
 }  // namespace limestone::testing

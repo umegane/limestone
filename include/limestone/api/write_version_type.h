@@ -31,7 +31,10 @@ class write_version_type {
 public:
     write_version_type();
     write_version_type(epoch_id_type epoch_number, std::uint64_t minor_write_version);
-
+    bool operator==(write_version_type value) {
+        return (value.epoch_number_ == epoch_number_) && (value.minor_write_version_ == minor_write_version_);
+    }
+    
 private:
     /**
      * @brief For PITR and major write version

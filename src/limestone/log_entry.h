@@ -83,6 +83,9 @@ public:
     void value(std::string& buf) {
         buf = value_;
     }
+    void write_version(write_version_type& buf) {
+        buf = write_version_;
+    }
 
 private:
     storage_id_type storage_id_{};
