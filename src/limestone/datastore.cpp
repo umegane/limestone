@@ -32,6 +32,7 @@ datastore::datastore(configuration const& conf) {
     location_ = conf.data_locations_.at(0);
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
+    snapshot_ = std::make_shared<snapshot>(location_);
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
@@ -41,10 +42,11 @@ datastore::datastore(configuration const& conf) {
     }
 }
 
-datastore::~datastore() {}
+datastore::~datastore() = default;
 
 void datastore::recover() {
-    snapshot_ = std::make_unique<snapshot>(location_);
+    check_before_ready(__func__);
+    
     auto file = snapshot_->file_path();
     if (!boost::filesystem::exists(file)) {
         recover(location_.string(), false);
@@ -67,16 +69,23 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) 
     ostrm.close();
 }
 
-void datastore::ready() {}
+void datastore::ready() {
+    ready_ = true;
+}
 
 snapshot* datastore::get_snapshot() {
-    snapshot_ = std::make_unique<snapshot>(location_);
+    check_after_ready(__func__);
     return snapshot_.get();
 }
 
-std::shared_ptr<snapshot> datastore::shared_snapshot() { return nullptr; }
+std::shared_ptr<snapshot> datastore::shared_snapshot() {
+    check_after_ready(__func__);
+    return snapshot_;
+}
 
 log_channel& datastore::create_channel(boost::filesystem::path location) {
+    check_before_ready(__func__);
+    
     std::lock_guard<std::mutex> lock(mtx_channel_);
     
     auto id = log_channel_id_.fetch_add(1);
@@ -87,6 +96,8 @@ log_channel& datastore::create_channel(boost::filesystem::path location) {
 epoch_id_type datastore::last_epoch() { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
 
 void datastore::switch_epoch(epoch_id_type new_epoch_id) {
+    check_after_ready(__func__);
+
     auto neid = static_cast<std::uint64_t>(new_epoch_id);
     if (neid == 0) {
         LOG(WARNING) << "switch to epoch_id_type of " << neid << " is curious";
@@ -124,12 +135,16 @@ epoch_id_type datastore::search_min_epoch_id() {
 }
 
 void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) {
+    check_before_ready(__func__);
     persistent_callback_ = callback;
 }
 
-void datastore::switch_safe_snapshot([[maybe_unused]] write_version_type write_version, [[maybe_unused]] bool inclusive) {}
+void datastore::switch_safe_snapshot([[maybe_unused]] write_version_type write_version, [[maybe_unused]] bool inclusive) {
+    check_after_ready(__func__);
+}
 
 void datastore::add_snapshot_callback(std::function<void(write_version_type)> callback) {
+    check_before_ready(__func__);
     snapshot_callback_ = callback;
 }
 
@@ -146,12 +161,26 @@ tag_repository& datastore::epoch_tag_repository() {
     return tag_repository_;
 }
 
-void datastore::recover([[maybe_unused]] epoch_tag tag) {}
+void datastore::recover([[maybe_unused]] epoch_tag tag) {
+    check_before_ready(__func__);
+}
 
 void datastore::add_file(boost::filesystem::path file) {
     std::lock_guard<std::mutex> lock(mtx_files_);
 
     files_.insert(file);
+}
+
+void datastore::check_after_ready(const char* func) {
+    if (!ready_) {
+        LOG(ERROR) << func << " called before ready()";
+    }
+}
+
+void datastore::check_before_ready(const char* func) {
+    if (ready_) {
+        LOG(ERROR) << func << " called after ready()";
+    }
 }
 
 } // namespace limestone::api

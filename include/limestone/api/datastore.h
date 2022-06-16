@@ -186,8 +186,8 @@ private:
 
     std::unique_ptr<backup> backup_{};
 
-    std::unique_ptr<snapshot> snapshot_{};
-
+    std::shared_ptr<snapshot> snapshot_{};
+ 
     std::function<void(epoch_id_type)> persistent_callback_;
 
     std::function<void(write_version_type)> snapshot_callback_;
@@ -205,6 +205,12 @@ private:
 
     void update_min_epoch_id();
     epoch_id_type search_min_epoch_id();
+
+    bool ready_{};
+    
+    void check_after_ready(const char* func);
+
+    void check_before_ready(const char* func);
 };
 
 } // namespace limestone::api
