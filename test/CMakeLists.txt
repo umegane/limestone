@@ -28,8 +28,9 @@ function (add_test_executable source_file)
 endfunction (add_test_executable)
 
 file(GLOB SRCS
-        "limestone/*.cpp"
         "limestone/api/*.cpp"
+        "limestone/log/*.cpp"
+        "limestone/epoch/*.cpp"
         )
 
 foreach(file ${SRCS})

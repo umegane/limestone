@@ -48,6 +48,7 @@ void log_channel::begin_session() {
 void log_channel::end_session() {
     strm_.flush();
     current_epoch_id_.store(UINT64_MAX);
+    envelope_->update_min_epoch_id();
     strm_.close();
 }
 

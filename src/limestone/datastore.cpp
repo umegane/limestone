@@ -149,6 +149,7 @@ void datastore::add_snapshot_callback(std::function<void(write_version_type)> ca
 }
 
 std::future<void> datastore::shutdown() {
+    ready_ = false;
     return std::async(std::launch::async, []{ std::this_thread::sleep_for(std::chrono::seconds(1)); });
 }
 
