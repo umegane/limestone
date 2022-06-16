@@ -8,23 +8,23 @@
 
 namespace limestone::testing {
 
+constexpr const char* data_location = "/tmp/log_and_recover_test/data_location";
+constexpr const char* metadata_location = "/tmp/log_and_recover_test/metadata_location";
+
 class log_and_recover_test : public ::testing::Test {
 protected:
-    const char* data_location = "/tmp/data_location";
-
     virtual void SetUp() {
-        LOG(INFO);
-        if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
+        if (system("rm -rf /tmp/log_and_recover_test") != 0) {
             std::cerr << "cannot remove directory" << std::endl;
         }
-        if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
+        if (system("mkdir -p /tmp/log_and_recover_test/data_location /tmp/log_and_recover_test/metadata_location") != 0) {
             std::cerr << "cannot make directory" << std::endl;
         }
 
         std::vector<boost::filesystem::path> data_locations{};
         data_locations.emplace_back(data_location);
-        boost::filesystem::path metadata_location{"/tmp/metadata_location"};
-        limestone::api::configuration conf(data_locations, metadata_location);
+        boost::filesystem::path metadata_location_path{metadata_location};
+        limestone::api::configuration conf(data_locations, metadata_location_path);
 
         datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
 
@@ -72,8 +72,10 @@ protected:
     }
 
     virtual void TearDown() {
-        LOG(INFO);
         datastore_ = nullptr;
+        if (system("rm -rf /tmp/log_and_recover_test") != 0) {
+            std::cerr << "cannot remove directory" << std::endl;
+        }
     }
 
 protected:
@@ -105,8 +107,8 @@ TEST_F(log_and_recover_test, recovery_interrupt_datastore_object_reallocation) {
     LOG(INFO);
     std::vector<boost::filesystem::path> data_locations{};
     data_locations.emplace_back(data_location);
-    boost::filesystem::path metadata_location{"/tmp/metadata_location"};
-    limestone::api::configuration conf(data_locations, metadata_location);
+    boost::filesystem::path metadata_location_path{metadata_location};
+    limestone::api::configuration conf(data_locations, metadata_location_path);
 
     datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
 

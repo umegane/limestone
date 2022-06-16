@@ -8,9 +8,11 @@
 
 namespace limestone::testing {
 
+constexpr const char* data_location = "/tmp/datastore_test/data_location";
+constexpr const char* metadata_location = "/tmp/datastore_test/metadata_location";
+
 class datastore_test : public ::testing::Test {
 public:
-    const char* data_location = "/tmp/data_location";
     static inline std::atomic<std::size_t> durable_epoch_{0};
 
     virtual void SetUp() {
@@ -20,6 +22,9 @@ public:
 
     virtual void TearDown() {
         datastore_ = nullptr;
+        if (system("rm -rf /tmp/datastore_test") != 0) {
+            std::cerr << "cannot remove directory" << std::endl;
+        }
     }
 
     static std::size_t get_durable_epoch() {
@@ -37,17 +42,17 @@ protected:
 TEST_F(datastore_test, add_persistent_callback_test) { // NOLINT
     FLAGS_stderrthreshold = 0;
 
-    if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
+    if (system("rm -rf /tmp/datastore_test") != 0) {
         std::cerr << "cannot remove directory" << std::endl;
     }
-    if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
+    if (system("mkdir -p /tmp/datastore_test/data_location /tmp/datastore_test/metadata_location") != 0) {
         std::cerr << "cannot make directory" << std::endl;
     }
 
     std::vector<boost::filesystem::path> data_locations{};
     data_locations.emplace_back(data_location);
-    boost::filesystem::path metadata_location{"/tmp/metadata_location"};
-    limestone::api::configuration conf(data_locations, metadata_location);
+    boost::filesystem::path metadata_location_path{metadata_location};
+    limestone::api::configuration conf(data_locations, metadata_location_path);
 
     datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
 

@@ -8,14 +8,18 @@
 
 namespace limestone::testing {
 
+constexpr const char* data_location = "/tmp/log_and_recover_off_by_one_test/data_location";
+constexpr const char* metadata_location = "/tmp/log_and_recover_off_by_one_test/metadata_location";
+
 class log_and_recover_off_by_one_test : public ::testing::Test {
 public:
-    const char* data_location = "/tmp/data_location";
-
     virtual void SetUp() {}
 
     virtual void TearDown() {
         datastore_ = nullptr;
+        if (system("rm -rf /tmp/log_and_recover_off_by_one_test") != 0) {
+            std::cerr << "cannot remove directory" << std::endl;
+        }
     }
 
 protected:
@@ -23,17 +27,17 @@ protected:
 };
 
 TEST_F(log_and_recover_off_by_one_test, log_and_recovery) {
-    if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
+    if (system("rm -rf /tmp/log_and_recover_off_by_one_test") != 0) {
         std::cerr << "cannot remove directory" << std::endl;
     }
-    if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
+    if (system("mkdir -p /tmp/log_and_recover_off_by_one_test/data_location /tmp/log_and_recover_off_by_one_test/metadata_location") != 0) {
         std::cerr << "cannot make directory" << std::endl;
     }
 
     std::vector<boost::filesystem::path> data_locations{};
     data_locations.emplace_back(data_location);
-    boost::filesystem::path metadata_location{"/tmp/metadata_location"};
-    limestone::api::configuration conf(data_locations, metadata_location);
+    boost::filesystem::path metadata_location_path{metadata_location};
+    limestone::api::configuration conf(data_locations, metadata_location_path);
 
     datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
 
