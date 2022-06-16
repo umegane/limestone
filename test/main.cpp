@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "TestRoot.h"
+#include "test_root.h"
 
 #include <stdlib.h>
 #include <errno.h>
@@ -22,6 +22,7 @@
 
 int main(int argc, char **argv) {
     google::InitGoogleLogging("limestone tests");
+    FLAGS_logtostderr = true;
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -4,15 +4,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <xmmintrin.h>
-#include "TestRoot.h"
+#include "test_root.h"
 
 namespace limestone::testing {
 
-class LogAndRecoverTest : public ::testing::Test {
-public:
+class log_and_recover_test : public ::testing::Test {
+protected:
     const char* data_location = "/tmp/data_location";
 
     virtual void SetUp() {
+        LOG(INFO);
         if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
             std::cerr << "cannot remove directory" << std::endl;
         }
@@ -71,6 +72,7 @@ public:
     }
 
     virtual void TearDown() {
+        LOG(INFO);
         datastore_ = nullptr;
     }
 
@@ -78,7 +80,8 @@ protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-TEST_F(LogAndRecoverTest, Recovery) {
+TEST_F(log_and_recover_test, recovery) {
+    LOG(INFO);
     // recover and ready
     datastore_->recover();
     datastore_->ready();
@@ -98,7 +101,8 @@ TEST_F(LogAndRecoverTest, Recovery) {
     datastore_->shutdown();
 }
 
-TEST_F(LogAndRecoverTest, RecoveryInterruptDatastoreObjectReallocation) { // NOLINT
+TEST_F(log_and_recover_test, recovery_interrupt_datastore_object_reallocation) { // NOLINT
+    LOG(INFO);
     std::vector<boost::filesystem::path> data_locations{};
     data_locations.emplace_back(data_location);
     boost::filesystem::path metadata_location{"/tmp/metadata_location"};

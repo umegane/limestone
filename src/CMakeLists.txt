@@ -22,3 +22,19 @@ target_link_libraries(${package_name}
 set_compile_options(${package_name})
 
 install_custom(${package_name} ${export_name})
+
+# for tests
+add_library(limestone-impl INTERFACE)
+
+target_include_directories(limestone-impl
+        INTERFACE .
+        )
+
+target_link_libraries(limestone-impl
+        INTERFACE ${package_name}
+        INTERFACE Boost::boost
+        INTERFACE Boost::filesystem
+        INTERFACE Boost::thread
+        INTERFACE Boost::container
+        INTERFACE glog::glog
+        )

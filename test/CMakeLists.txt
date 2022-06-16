@@ -1,27 +1,38 @@
-# Copyright 2019-2019 tsurugi fin project.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+set(test_target limestone-test)
 
-file(GLOB TEST_SOURCES
-    "*.cpp"
-)
+add_executable(${test_target}
+        main.cpp
+        )
 
-register_tests(
-    TARGET limestone
-    DEPENDS
-      limestone-api
-      Boost::filesystem
-      glog::glog
-      gflags::gflags
-    SOURCES ${TEST_SOURCES}
-)
+target_include_directories(${test_target}
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+
+target_link_libraries(${test_target}
+        PRIVATE limestone-impl
+        PUBLIC gtest
+        PRIVATE Boost::filesystem
+        PRIVATE glog::glog
+        PRIVATE gflags::gflags
+        )
+
+function (add_test_executable source_file)
+    get_filename_component(test_name "${source_file}" NAME_WE)
+    target_sources(${test_target}
+            PRIVATE ${source_file}
+            )
+    add_test(
+            NAME ${test_name}
+            COMMAND ${test_target} --gtest_filter=${test_name}.* --gtest_output=xml:${test_name}_gtest_result.xml
+    )
+endfunction (add_test_executable)
+
+file(GLOB SRCS
+        "limestone/*.cpp"
+        "limestone/api/*.cpp"
+        )
+
+foreach(file ${SRCS})
+    add_test_executable(${file})
+endforeach()
+  

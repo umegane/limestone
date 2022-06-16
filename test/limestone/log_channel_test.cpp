@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 #include <unistd.h>
-#include "TestRoot.h"
+#include "test_root.h"
 
 namespace limestone::testing {
 
-class LogChannelTest : public ::testing::Test {
+class log_channel_test : public ::testing::Test {
 public:
     virtual void SetUp() {
         if (system("rm -f /tmp/pwal_000?") != 0) {
@@ -41,12 +41,12 @@ protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-TEST_F(LogChannelTest, name) {
+TEST_F(log_channel_test, name) {
     limestone::api::log_channel& channel = datastore_->create_channel(boost::filesystem::path("/tmp"));
     EXPECT_EQ(channel.file_path().string(), "/tmp/pwal_0000");
 }
 
-TEST_F(LogChannelTest, number_and_backup) {
+TEST_F(log_channel_test, number_and_backup) {
     limestone::api::log_channel& channel1 = datastore_->create_channel(boost::filesystem::path("/tmp"));
     limestone::api::log_channel& channel2 = datastore_->create_channel(boost::filesystem::path("/tmp"));
     limestone::api::log_channel& channel3 = datastore_->create_channel(boost::filesystem::path("/tmp"));

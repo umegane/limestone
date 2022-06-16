@@ -4,11 +4,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <xmmintrin.h>
-#include "TestRoot.h"
+#include "test_root.h"
 
 namespace limestone::testing {
 
-class DatastoreTest : public ::testing::Test {
+class datastore_test : public ::testing::Test {
 public:
     const char* data_location = "/tmp/data_location";
     static inline std::atomic<std::size_t> durable_epoch_{0};
@@ -34,7 +34,7 @@ protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-TEST_F(DatastoreTest, add_persistent_callback_test) { // NOLINT
+TEST_F(datastore_test, add_persistent_callback_test) { // NOLINT
     FLAGS_stderrthreshold = 0;
 
     if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {

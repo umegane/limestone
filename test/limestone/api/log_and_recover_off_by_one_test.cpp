@@ -4,11 +4,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <xmmintrin.h>
-#include "TestRoot.h"
+#include "test_root.h"
 
 namespace limestone::testing {
 
-class LogAndRecoverTest : public ::testing::Test {
+class log_and_recover_off_by_one_test : public ::testing::Test {
 public:
     const char* data_location = "/tmp/data_location";
 
@@ -22,7 +22,7 @@ protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-TEST_F(LogAndRecoverTest, LogAndRecovery) {
+TEST_F(log_and_recover_off_by_one_test, log_and_recovery) {
     if (system("rm -rf /tmp/data_location /tmp/metadata_location") != 0) {
         std::cerr << "cannot remove directory" << std::endl;
     }

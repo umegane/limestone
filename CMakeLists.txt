@@ -58,7 +58,6 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(CompileOptions)
 include(InstallOptions)
-include(Tests)
 
 if (BUILD_TESTS OR BUILD_EXAMPLES)
     enable_testing()
