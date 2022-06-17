@@ -36,7 +36,6 @@ class log_channel {
     friend class datastore;
 
 public:
-    log_channel() = default; // FIXME for test in shirakami
     log_channel(boost::filesystem::path location, std::size_t id, datastore* envelope);
 
     void begin_session();
