@@ -60,11 +60,11 @@ jobs:
         run: |
           python tools/bin/run-clang-tidy.py -quiet -export-fixes=build/clang-tidy-fix.yaml -p build -extra-arg=-Wno-unknown-warning-option -header-filter=$(pwd)'/(include|src)/.*\.h$' $(pwd)'/src/.*' 2>&1 | tee build/clang-tidy.log
 
-      - id: Doxygen
-        name: Doxygen
-        run: |
-          cd build
-          make doxygen 2> >(tee doxygen-error.log)
+      # - id: Doxygen
+      #   name: Doxygen
+      #   run: |
+      #     cd build
+      #     make doxygen 2> >(tee doxygen-error.log)
 
       - id: Generate_Annotations
         name: Generate_Annotations
