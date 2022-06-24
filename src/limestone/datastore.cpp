@@ -32,7 +32,6 @@ datastore::datastore(configuration const& conf) {
     location_ = conf.data_locations_.at(0);
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
-    snapshot_ = std::make_shared<snapshot>(location_);
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
@@ -40,6 +39,7 @@ datastore::datastore(configuration const& conf) {
             std::abort();
         }
     }
+    snapshot_ = std::make_shared<snapshot>(location_);
 }
 
 datastore::~datastore() = default;
