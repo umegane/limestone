@@ -41,6 +41,7 @@ namespace limestone::api {
  */
 class datastore {
     friend class log_channel;
+    static constexpr const std::string_view epoch_file_name = "epoch";  // NOLINT
 
 public:
     /**
@@ -192,6 +193,8 @@ private:
 
     std::function<void(write_version_type)> snapshot_callback_;
 
+    boost::filesystem::path epoch_file_path_{};
+
     tag_repository tag_repository_{};
 
     std::atomic_uint64_t log_channel_id_{};
@@ -203,14 +206,15 @@ private:
 
     void add_file(boost::filesystem::path file);
 
-    void update_min_epoch_id();
-    epoch_id_type search_min_epoch_id();
+    bool update_min_epoch_id();
 
     bool ready_{};
     
     void check_after_ready(const char* func);
 
     void check_before_ready(const char* func);
+
+    epoch_id_type last_durable_epoch(boost::filesystem::path from_dir);
 };
 
 } // namespace limestone::api

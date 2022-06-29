@@ -31,8 +31,8 @@ public:
         }
 
         std::vector<boost::filesystem::path> data_locations{};
-        data_locations.emplace_back("/tmp");
-        boost::filesystem::path metadata_location{"/tmp"};
+        data_locations.emplace_back(location);
+        boost::filesystem::path metadata_location{location};
         limestone::api::configuration conf(data_locations, metadata_location);
 
         datastore_ = std::make_unique<limestone::api::datastore_test>(conf);
@@ -50,8 +50,8 @@ protected:
 };
 
 TEST_F(log_channel_test, name) {
-    limestone::api::log_channel& channel = datastore_->create_channel(boost::filesystem::path("/tmp"));
-    EXPECT_EQ(channel.file_path().string(), "/tmp/pwal_0000");
+    limestone::api::log_channel& channel = datastore_->create_channel(boost::filesystem::path(location));
+    EXPECT_EQ(channel.file_path().string(), std::string(location) + "/pwal_0000");
 }
 
 TEST_F(log_channel_test, number_and_backup) {
@@ -77,11 +77,12 @@ TEST_F(log_channel_test, number_and_backup) {
     auto backup = datastore_->begin_backup();
     auto files = backup.files();
 
-    EXPECT_EQ(files.size(), 4);
-    EXPECT_EQ(files.at(0).string(), std::string(location) + "/pwal_0000");
-    EXPECT_EQ(files.at(1).string(), std::string(location) + "/pwal_0001");
-    EXPECT_EQ(files.at(2).string(), std::string(location) + "/pwal_0002");
-    EXPECT_EQ(files.at(3).string(), std::string(location) + "/pwal_0003");
+    EXPECT_EQ(files.size(), 5);
+    EXPECT_EQ(files.at(0).string(), std::string(location) + "/epoch");
+    EXPECT_EQ(files.at(1).string(), std::string(location) + "/pwal_0000");
+    EXPECT_EQ(files.at(2).string(), std::string(location) + "/pwal_0001");
+    EXPECT_EQ(files.at(3).string(), std::string(location) + "/pwal_0002");
+    EXPECT_EQ(files.at(4).string(), std::string(location) + "/pwal_0003");
 }
 
 }  // namespace limestone::testing

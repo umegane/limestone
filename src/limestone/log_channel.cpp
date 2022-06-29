@@ -27,7 +27,7 @@ log_channel::log_channel(boost::filesystem::path location, std::size_t id, datas
     : envelope_(envelope), location_(location), id_(id)
 {
     std::stringstream ss;
-    ss << "pwal_" << std::setw(4) << std::setfill('0') << std::dec << id_;
+    ss << prefix << std::setw(4) << std::setfill('0') << std::dec << id_;
     file_ = ss.str();
 }
 
@@ -43,10 +43,12 @@ void log_channel::begin_session() {
         envelope_->add_file(log_file);
         registered_ = true;
     }
+    log_entry::begin_session(strm_, static_cast<epoch_id_type>(current_epoch_id_.load()));
 }
 
 void log_channel::end_session() {
     strm_.flush();
+    finished_epoch_id_.store(current_epoch_id_.load());
     current_epoch_id_.store(UINT64_MAX);
     envelope_->update_min_epoch_id();
     strm_.close();
