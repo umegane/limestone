@@ -41,6 +41,10 @@ namespace limestone::api {
  */
 class datastore {
     friend class log_channel;
+
+    /**
+     * @brief name of a file to record durable epoch
+     */
     static constexpr const std::string_view epoch_file_name = "epoch";  // NOLINT
 
 public:
@@ -213,8 +217,6 @@ private:
     void check_after_ready(const char* func);
 
     void check_before_ready(const char* func);
-
-    epoch_id_type last_durable_epoch(boost::filesystem::path from_dir);
 };
 
 } // namespace limestone::api

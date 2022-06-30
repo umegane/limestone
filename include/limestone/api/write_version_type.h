@@ -25,6 +25,7 @@ namespace limestone::api {
 using epoch_t = std::int64_t;  // from shirakami/src/concurrency_control/silo/include/epoch.h
 
 class write_version_type {
+    friend class datastore;
     friend class log_channel;
     friend class log_entry;
 
@@ -34,7 +35,7 @@ public:
     bool operator==(write_version_type value) {
         return (value.epoch_number_ == epoch_number_) && (value.minor_write_version_ == minor_write_version_);
     }
-    
+
 private:
     /**
      * @brief For PITR and major write version

@@ -96,6 +96,20 @@ public:
         strm.write((char*)value.data(), value_len);
     }
 
+    static void write(boost::filesystem::ofstream& strm, std::string_view key_sid, std::string_view value_etc) {
+        entry_type type = entry_type::normal_entry;
+        strm.write((char*)&type, sizeof(entry_type));
+
+        std::int32_t key_len = key_sid.length() - sizeof(storage_id_type);
+        strm.write((char*)&key_len, sizeof(std::int32_t));
+
+        std::int32_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
+        strm.write((char*)&value_len, sizeof(std::int32_t));
+
+        strm.write((char*)key_sid.data(), key_sid.length());
+        strm.write((char*)value_etc.data(), value_etc.length());
+    }
+
 // for reader
     bool read(boost::filesystem::ifstream& strm) {
         strm.read((char*)&entry_type_, sizeof(entry_type));
@@ -159,26 +173,22 @@ public:
     std::string& key_sid() {
         return key_sid_;
     }
+    static epoch_id_type write_version_epoch_number(std::string_view value_etc) {
+        epoch_id_type epoch_id;
+        memcpy(reinterpret_cast<char*>(&epoch_id), value_etc.data(), sizeof(epoch_id_type));
+        return epoch_id;
+    }
+    static std::uint64_t write_version_minor_write_version(std::string_view value_etc) {
+        std::uint64_t minor_write_version;
+        memcpy(reinterpret_cast<char*>(&minor_write_version), value_etc.data() + sizeof(epoch_id_type), sizeof(std::uint64_t));
+        return minor_write_version;
+    }
 
 private:
     entry_type entry_type_{};
     epoch_id_type epoch_id_{};
     std::string key_sid_{};
     std::string value_etc_{};
-
-    void write(boost::filesystem::ofstream& strm, std::string_view key_sid, std::string_view value_etc) {
-        entry_type type = entry_type::normal_entry;
-        strm.write((char*)&type, sizeof(entry_type));
-
-        std::int32_t key_len = key_sid.length() - sizeof(storage_id_type);
-        strm.write((char*)&key_len, sizeof(std::int32_t));
-
-        std::int32_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
-        strm.write((char*)&value_len, sizeof(std::int32_t));
-
-        strm.write((char*)key_sid.data(), key_sid.length());
-        strm.write((char*)value_etc.data(), value_etc.length());
-    }
 };
 
 } // namespace limestone::api

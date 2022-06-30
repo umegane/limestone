@@ -34,6 +34,10 @@ class datastore;
 
 class log_channel {
     friend class datastore;
+
+    /**
+     * @brief prefix of pwal file name
+     */
     static constexpr const std::string_view prefix = "pwal_";  // NOLINT
     
 public:
