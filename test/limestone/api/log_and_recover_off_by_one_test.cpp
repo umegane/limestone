@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <unordered_map>
 #include <xmmintrin.h>
 #include "test_root.h"
 
@@ -73,6 +74,10 @@ TEST_F(log_and_recover_off_by_one_test, log_and_recovery) {
     // epoch 2
     datastore_->switch_epoch(2);
 
+    // expectation, which is necessary because the order of data obtained from cursors
+    // is different from the order in which they were put in.
+    std::unordered_map<std::string, std::string> expectation{ {"k", "v"}, {"", ""}, };
+
     // wait epoch 1's durable
     for (;;) {
         if (get_durable_epoch() >= 1) {
@@ -90,19 +95,28 @@ TEST_F(log_and_recover_off_by_one_test, log_and_recovery) {
 
     // create snapshot
     limestone::api::snapshot* ss{datastore_->get_snapshot()};
-    ASSERT_TRUE(ss->get_cursor().next()); // point first
+    ASSERT_TRUE(ss->get_cursor().next());
     std::string buf{};
     ss->get_cursor().key(buf);
-    ASSERT_EQ(buf, "k");
-    ss->get_cursor().value(buf);
-    ASSERT_EQ(buf, "v");
-    ASSERT_EQ(ss->get_cursor().storage(), 2);
-    ASSERT_TRUE(ss->get_cursor().next()); // nothing
-    ss->get_cursor().key(buf);
-    ASSERT_EQ(buf, "");
-    ss->get_cursor().value(buf);
-    ASSERT_EQ(buf, "");
 
+    auto it1 = expectation.find(buf);
+    ASSERT_FALSE(it1 == expectation.end());
+    ss->get_cursor().value(buf);
+    ASSERT_EQ(buf, it1->second);
+    expectation.erase(it1);
+    
+    ASSERT_EQ(ss->get_cursor().storage(), 2);
+    ASSERT_TRUE(ss->get_cursor().next());
+    ss->get_cursor().key(buf);
+
+    auto it2 = expectation.find(buf);
+    ASSERT_FALSE(it2 == expectation.end());
+    ss->get_cursor().value(buf);
+    ASSERT_EQ(buf, it2->second);
+    expectation.erase(it2);
+
+    ASSERT_TRUE(expectation.empty());
+    
     // cleanup
     datastore_->shutdown();
 }
