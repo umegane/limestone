@@ -17,6 +17,7 @@ target_link_libraries(${package_name}
         PRIVATE Boost::thread
         PRIVATE Boost::container
         PRIVATE glog::glog
+        PRIVATE leveldb
 )
 
 set_compile_options(${package_name})
@@ -37,4 +38,5 @@ target_link_libraries(limestone-impl
         INTERFACE Boost::thread
         INTERFACE Boost::container
         INTERFACE glog::glog
-        )
+        INTERFACE leveldb
+)

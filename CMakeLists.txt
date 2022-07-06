@@ -51,7 +51,8 @@ find_package(Boost
         COMPONENTS filesystem thread system container stacktrace_backtrace
         REQUIRED
         )
-
+find_package(leveldb REQUIRED)
+      
 add_subdirectory(third_party) # should be before enable_testing()
 
 include(GNUInstallDirs)

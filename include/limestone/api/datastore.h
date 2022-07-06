@@ -42,6 +42,11 @@ namespace limestone::api {
 class datastore {
     friend class log_channel;
 
+    /**
+     * @brief name of a file to record durable epoch
+     */
+    static constexpr const std::string_view epoch_file_name = "epoch";  // NOLINT
+
 public:
     /**
      * @brief create empty object
@@ -65,7 +70,7 @@ public:
      * If location_ / snapshot::subdirectory_name_ / snapshot::file_name_ is exist, do nothing.
      * @attention this function is not thread-safe.
      */
-    void recover();
+    void recover(bool overwrite = true);
 
     /**
      * @brief create snapshot from log files stored in form directory
@@ -192,6 +197,8 @@ private:
 
     std::function<void(write_version_type)> snapshot_callback_;
 
+    boost::filesystem::path epoch_file_path_{};
+
     tag_repository tag_repository_{};
 
     std::atomic_uint64_t log_channel_id_{};
@@ -203,8 +210,7 @@ private:
 
     void add_file(boost::filesystem::path file);
 
-    void update_min_epoch_id();
-    epoch_id_type search_min_epoch_id();
+    bool update_min_epoch_id();
 
     bool ready_{};
     

@@ -35,6 +35,11 @@ class datastore;
 class log_channel {
     friend class datastore;
 
+    /**
+     * @brief prefix of pwal file name
+     */
+    static constexpr const std::string_view prefix = "pwal_";  // NOLINT
+    
 public:
     log_channel(boost::filesystem::path location, std::size_t id, datastore* envelope);
 
@@ -65,6 +70,8 @@ private:
     write_version_type write_version_{};
 
     std::atomic_uint64_t current_epoch_id_{UINT64_MAX};
+
+    std::atomic_uint64_t finished_epoch_id_{0};
 };
 
 } // namespace limestone::api

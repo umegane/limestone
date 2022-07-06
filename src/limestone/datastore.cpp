@@ -40,33 +40,16 @@ datastore::datastore(configuration const& conf) {
         }
     }
     snapshot_ = std::make_shared<snapshot>(location_);
+    epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
+    add_file(epoch_file_path_);
 }
 
 datastore::~datastore() = default;
 
-void datastore::recover() {
+void datastore::recover(bool overwrite) {
     check_before_ready(__func__);
     
-    auto file = snapshot_->file_path();
-    if (!boost::filesystem::exists(file)) {
-        recover(location_.string(), false);
-    }
-}
-void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) {
-    auto from_dir = boost::filesystem::path(std::string(from));
-
-    snapshot_ = std::make_unique<snapshot>(location_);
-    boost::filesystem::ofstream ostrm{};
-    ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::app | std::ios_base::binary);
-    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
-        if (!boost::filesystem::is_directory(p)) {
-            boost::filesystem::ifstream istrm;
-            istrm.open(p, std::ios_base::in | std::ios_base::binary);
-            for (log_entry e{}; e.read(istrm); e.write(ostrm));
-            istrm.close();
-        }
-    }
-    ostrm.close();
+    recover(location_.string(), overwrite);
 }
 
 void datastore::ready() {
@@ -99,39 +82,48 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) {
     check_after_ready(__func__);
 
     auto neid = static_cast<std::uint64_t>(new_epoch_id);
-    if (neid == 0) {
+    if (neid <= epoch_id_switched_.load()) {
         LOG(WARNING) << "switch to epoch_id_type of " << neid << " is curious";
     }
 
     epoch_id_switched_.store(neid);
     if (epoch_id_informed_.load() < (neid - 1)) {
-        update_min_epoch_id();
-    }
-}
-
-void datastore::update_min_epoch_id() {
-    std::uint64_t min_epoch = static_cast<std::uint64_t>(search_min_epoch_id());
-    std::uint64_t old_epoch_id = epoch_id_informed_.load();
-    while (old_epoch_id < min_epoch) {
-        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, min_epoch)) {
-            if (persistent_callback_) {
-                persistent_callback_(min_epoch);
-            }
-            return;
+        if (update_min_epoch_id()) {
+            boost::filesystem::ofstream strm{};
+            strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+            log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
+            strm.close();
         }
     }
 }
 
-epoch_id_type datastore::search_min_epoch_id() {
+bool datastore::update_min_epoch_id() {
     epoch_id_type min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
+    std::uint64_t max_finished_epoch = 0;
 
     for (const auto& e : log_channels_) {
-        auto lc_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
-        if (lc_epoch < min_epoch) {
-            min_epoch = lc_epoch;
+        auto local_current_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
+        if (local_current_epoch < min_epoch) {
+            min_epoch = local_current_epoch;
+        }
+        auto local_finished_epoch = e->finished_epoch_id_.load();
+        if (max_finished_epoch < local_finished_epoch) {
+            max_finished_epoch = local_finished_epoch;
         }
     }
-    return min_epoch - 1;
+    std::uint64_t min_working_epoch = min_epoch - 1;
+    std::uint64_t old_epoch_id = epoch_id_informed_.load();
+    bool rv{};
+    while (old_epoch_id < min_working_epoch) {
+        rv = (old_epoch_id < max_finished_epoch);
+        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, min_working_epoch)) {
+            if (persistent_callback_) {
+                persistent_callback_(min_working_epoch);
+            }
+            return rv;
+        }
+    }
+    return false;
 }
 
 void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) {
