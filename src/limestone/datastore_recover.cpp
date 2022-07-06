@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <iostream>
-
 #include <boost/filesystem/operations.hpp>
 #include <boost/foreach.hpp>
 #include <leveldb/db.h>
@@ -40,8 +38,7 @@ public:
         leveldb::Options options;
         options.create_if_missing = true;
         if (leveldb::Status status = leveldb::DB::Open(options, lvldb_path_.string(), &lvldb_); status.ok() == false) {
-            std::cerr << "Unable to open/create LevelDB database" << std::endl;
-            std::cerr << status.ToString() << std::endl;
+            LOG(ERROR) << "Unable to open/create LevelDB database, status = " << status.ToString();
             std::abort();
         }
     }
@@ -73,7 +70,7 @@ private:
             if (boost::filesystem::is_directory(lvldb_path_)) {
                 boost::filesystem::remove_all(lvldb_path_);
             } else {
-                std::cerr << lvldb_path_.string() << " is not a directory" << std::endl;
+                LOG(ERROR) << lvldb_path_.string() << " is not a directory";
                 std::abort();
             }
         }
@@ -90,6 +87,13 @@ static epoch_id_type last_durable_epoch(boost::filesystem::path file) {
 }
 
 void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) {
+    if (!overwrite) {
+        auto file = snapshot_->file_path();
+        if (boost::filesystem::exists(file)) {
+            return;
+        }
+    }
+
     auto from_dir = boost::filesystem::path(std::string(from));
     auto lvldb = std::make_unique<leveldb_wrapper>(from_dir);
 
@@ -140,7 +144,7 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) 
     }
 
     boost::filesystem::ofstream ostrm{};
-    ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
     leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         log_entry::write(ostrm, it->key().ToString(), it->value().ToString());

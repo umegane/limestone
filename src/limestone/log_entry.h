@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 #pragma once
-
-#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -127,7 +125,6 @@ public:
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
             strm.read((char*)key_sid_.data(), key_sid_.length());
-
             value_etc_.resize(value_len + sizeof(epoch_id_type) + sizeof(std::uint64_t));
             strm.read((char*)value_etc_.data(), value_etc_.length());
             break;

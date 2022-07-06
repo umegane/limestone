@@ -70,7 +70,7 @@ public:
      * If location_ / snapshot::subdirectory_name_ / snapshot::file_name_ is exist, do nothing.
      * @attention this function is not thread-safe.
      */
-    void recover();
+    void recover(bool overwrite = true);
 
     /**
      * @brief create snapshot from log files stored in form directory

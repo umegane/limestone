@@ -46,13 +46,10 @@ datastore::datastore(configuration const& conf) {
 
 datastore::~datastore() = default;
 
-void datastore::recover() {
+void datastore::recover(bool overwrite) {
     check_before_ready(__func__);
     
-    auto file = snapshot_->file_path();
-    if (!boost::filesystem::exists(file)) {
-        recover(location_.string(), false);
-    }
+    recover(location_.string(), overwrite);
 }
 
 void datastore::ready() {
