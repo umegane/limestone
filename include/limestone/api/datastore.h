@@ -47,6 +47,12 @@ class datastore {
      */
     static constexpr const std::string_view epoch_file_name = "epoch";  // NOLINT
 
+enum class state : std::int64_t {
+    not_ready = 0,
+    ready = 1,
+    shutdown = 2,
+};
+
 public:
     /**
      * @brief create empty object
@@ -212,7 +218,7 @@ private:
 
     bool update_min_epoch_id();
 
-    bool ready_{};
+    state state_{};
     
     void check_after_ready(const char* func);
 

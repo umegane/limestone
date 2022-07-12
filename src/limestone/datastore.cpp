@@ -53,7 +53,7 @@ void datastore::recover(bool overwrite) {
 }
 
 void datastore::ready() {
-    ready_ = true;
+    state_ = state::ready;
 }
 
 snapshot* datastore::get_snapshot() {
@@ -141,8 +141,8 @@ void datastore::add_snapshot_callback(std::function<void(write_version_type)> ca
 }
 
 std::future<void> datastore::shutdown() {
-    ready_ = false;
-    return std::async(std::launch::async, []{ std::this_thread::sleep_for(std::chrono::seconds(1)); });
+    state_ = state::shutdown;
+    return std::async(std::launch::async, []{ std::this_thread::sleep_for(std::chrono::microseconds(100000)); });
 }
 
 backup& datastore::begin_backup() {
@@ -165,13 +165,13 @@ void datastore::add_file(boost::filesystem::path file) {
 }
 
 void datastore::check_after_ready(const char* func) {
-    if (!ready_) {
+    if (state_ == state::not_ready) {
         LOG(ERROR) << func << " called before ready()";
     }
 }
 
 void datastore::check_before_ready(const char* func) {
-    if (ready_) {
+    if (state_ != state::not_ready) {
         LOG(ERROR) << func << " called after ready()";
     }
 }
