@@ -17,10 +17,11 @@
 #include <boost/foreach.hpp>
 #include <leveldb/db.h>
 
+#include <glog/logging.h>
+#include <limestone/logging.h>
+
 #include <limestone/api/datastore.h>
 #include "log_entry.h"
-
-#include "glog/logging.h"
 
 namespace limestone::api {
 
@@ -86,10 +87,12 @@ static epoch_id_type last_durable_epoch(boost::filesystem::path file) {
     return e.epoch_id();
 }
 
-void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) {
+void datastore::recover(std::string_view from, bool overwrite) {
+    VLOG(log_debug) << "recover begin, from directory = " << from << " , overwrite = " << (overwrite ? "true" : "false");
     if (!overwrite) {
         auto file = snapshot_->file_path();
         if (boost::filesystem::exists(file)) {
+            VLOG(log_debug) << "snapshot file (" << snapshot_->file_path().string() << ") exists, thus nothins will be taken place";
             return;
         }
     }
@@ -101,6 +104,7 @@ void datastore::recover(std::string_view from, [[maybe_unused]] bool overwrite) 
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (p.filename().string().substr(0, log_channel::prefix.length()).compare(log_channel::prefix) == 0) {
+            VLOG(log_debug) << "processing pwal file: " << p.filename().string();
             log_entry e;
             epoch_id_type current_epoch{UINT64_MAX};
 

@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 #include <limestone/api/cursor.h>
+
+#include <glog/logging.h>
+#include <limestone/logging.h>
+
 #include "log_entry.h"
 
 namespace limestone::api {
@@ -27,12 +31,16 @@ cursor::~cursor() {
 
 bool cursor::next() {
     if (!istrm_.good()) {
+        VLOG(log_trace) << "file stream of the cursor is not good";
         return false;
     }
     if (istrm_.eof()) {
+        VLOG(log_trace) << "already detected eof of the cursor";
         return false;
     }
-    return log_entry_->read(istrm_);
+    auto rv = log_entry_->read(istrm_);
+    VLOG(log_trace) << (rv ? "read an entry from the cursor" : "detect eof of the cursor");
+    return rv;
 }
 
 storage_id_type cursor::storage() {

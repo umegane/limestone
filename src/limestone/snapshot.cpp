@@ -15,7 +15,9 @@
  */
 #include <limestone/api/snapshot.h>
 
-#include <iostream> // FIXME remove this
+#include <glog/logging.h>
+#include <limestone/logging.h>
+
 #include <boost/filesystem.hpp>
 
 namespace limestone::api {  // FIXME fill implementation
@@ -26,7 +28,7 @@ snapshot::snapshot(boost::filesystem::path dir) : dir_(dir / boost::filesystem::
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(dir_, error);
         if (!result_mkdir || error) {
-            std::cerr << "fail to create directory" << std::endl;  // FIXME use logger
+            LOG(ERROR) << "fail to create directory";
             std::abort();
         }
     }
@@ -36,6 +38,7 @@ cursor& snapshot::get_cursor() {
     if (!cursor_) {
         cursor_ = std::make_unique<cursor>(file_path());
     }
+    VLOG(log_debug) << "returns cursor";
     return *cursor_;
 }
 

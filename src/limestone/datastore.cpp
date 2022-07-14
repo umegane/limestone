@@ -19,10 +19,11 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/foreach.hpp>
 
+#include <glog/logging.h>
+#include <limestone/logging.h>
+
 #include <limestone/api/datastore.h>
 #include "log_entry.h"
-
-#include "glog/logging.h"
 
 namespace limestone::api {
 
@@ -42,6 +43,7 @@ datastore::datastore(configuration const& conf) {
     snapshot_ = std::make_shared<snapshot>(location_);
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
     add_file(epoch_file_path_);
+    VLOG(log_debug) << "datastore is created, location = " << location_.string();
 }
 
 datastore::~datastore() = default;
@@ -58,6 +60,7 @@ void datastore::ready() {
 
 snapshot* datastore::get_snapshot() {
     check_after_ready(__func__);
+    VLOG(log_debug) << "returns snapshot";
     return snapshot_.get();
 }
 
