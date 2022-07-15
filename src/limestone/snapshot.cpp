@@ -38,7 +38,7 @@ cursor& snapshot::get_cursor() {
     if (!cursor_) {
         cursor_ = std::make_unique<cursor>(file_path());
     }
-    VLOG(log_debug) << "returns cursor";
+    DVLOG(log_debug) << "returns cursor";
     return *cursor_;
 }
 

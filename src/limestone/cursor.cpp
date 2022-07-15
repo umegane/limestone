@@ -31,15 +31,15 @@ cursor::~cursor() {
 
 bool cursor::next() {
     if (!istrm_.good()) {
-        VLOG(log_trace) << "file stream of the cursor is not good";
+        DVLOG(log_trace) << "file stream of the cursor is not good";
         return false;
     }
     if (istrm_.eof()) {
-        VLOG(log_trace) << "already detected eof of the cursor";
+        DVLOG(log_trace) << "already detected eof of the cursor";
         return false;
     }
     auto rv = log_entry_->read(istrm_);
-    VLOG(log_trace) << (rv ? "read an entry from the cursor" : "detect eof of the cursor");
+    DVLOG(log_trace) << (rv ? "read an entry from the cursor" : "detect eof of the cursor");
     return rv;
 }
 
