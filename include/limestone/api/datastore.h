@@ -25,6 +25,7 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include <limestone/status.h>
 #include <limestone/api/backup.h>
 #include <limestone/api/log_channel.h>
 #include <limestone/api/configuration.h>
@@ -75,17 +76,18 @@ public:
      * @details file name of snapshot to be created is snapshot::file_name_ which is stored in location_ / snapshot::subdirectory_name_.
      * If location_ / snapshot::subdirectory_name_ / snapshot::file_name_ is exist, do nothing.
      * @attention this function is not thread-safe.
+     * @note overwrite flag is deplicated
      */
     void recover(bool overwrite = true);
 
     /**
-     * @brief create snapshot from log files stored in form directory
-     * @details file name of snapshot to be created is snapshot::file_name_ which is stored in location_ / snapshot::subdirectory_name_.
-     * @param from the location of log files
-     * @param overwrite location_ / snapshot::subdirectory_name_ / snapshot::file_name_ is overwritten
+     * @brief restore log files, etc. located at from directory
+     * @details log file, etc. stored in from directroy are to be copied to log directory.
+     * @param from the location of the log files backuped
      * @attention this function is not thread-safe.
+     * @return status indicating whether the process ends successfully or not
      */
-    void recover(std::string_view from, bool overwrite);
+    status restore(std::string_view from, bool keep_backup);
 
     /**
      * @brief transition this object to an operational state
@@ -223,6 +225,14 @@ private:
     void check_after_ready(const char* func);
 
     void check_before_ready(const char* func);
+
+    /**
+     * @brief create snapshot from log files stored in the location directory
+     * @details file name of snapshot to be created is snapshot::file_name_ which is stored in location_ / snapshot::subdirectory_name_.
+     * @param from the location of log files
+     * @attention this function is not thread-safe.
+     */
+    void create_snapshot();
 };
 
 } // namespace limestone::api

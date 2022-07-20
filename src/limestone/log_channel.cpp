@@ -54,7 +54,7 @@ void log_channel::end_session() {
     strm_.close();
 }
 
-void log_channel::abort_session([[maybe_unused]] error_code_type error_code, [[maybe_unused]] std::string message) {
+void log_channel::abort_session([[maybe_unused]] status status_code, [[maybe_unused]] std::string message) {
 }
 
 void log_channel::add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version) {

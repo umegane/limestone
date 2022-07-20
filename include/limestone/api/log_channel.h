@@ -23,7 +23,7 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include <limestone/error_code.h>
+#include <limestone/status.h>
 #include <limestone/api/storage_id_type.h>
 #include <limestone/api/write_version_type.h>
 #include <limestone/api/large_object_input.h>
@@ -47,7 +47,7 @@ public:
 
     void end_session();
 
-    void abort_session(error_code_type error_code, std::string message);
+    void abort_session(status status_code, std::string message);
 
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version, std::vector<large_object_input>& large_objects);
     void add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version);

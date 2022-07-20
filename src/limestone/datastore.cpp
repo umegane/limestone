@@ -48,13 +48,12 @@ datastore::datastore(configuration const& conf) {
 
 datastore::~datastore() = default;
 
-void datastore::recover(bool overwrite) {
+void datastore::recover([[maybe_unused]] bool overwrite) {
     check_before_ready(__func__);
-    
-    recover(location_.string(), overwrite);
 }
 
 void datastore::ready() {
+    create_snapshot();
     state_ = state::ready;
 }
 

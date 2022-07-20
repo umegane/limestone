@@ -87,17 +87,8 @@ static epoch_id_type last_durable_epoch(boost::filesystem::path file) {
     return e.epoch_id();
 }
 
-void datastore::recover(std::string_view from, bool overwrite) {
-    DVLOG(log_debug) << "recover begin, from directory = " << from << " , overwrite = " << (overwrite ? "true" : "false");
-    if (!overwrite) {
-        auto file = snapshot_->file_path();
-        if (boost::filesystem::exists(file)) {
-            DVLOG(log_debug) << "snapshot file (" << snapshot_->file_path().string() << ") exists, thus nothins will be taken place";
-            return;
-        }
-    }
-
-    auto from_dir = boost::filesystem::path(std::string(from));
+void datastore::create_snapshot() {
+    auto& from_dir = location_;
     auto lvldb = std::make_unique<leveldb_wrapper>(from_dir);
 
     epoch_id_type ld_epoch = last_durable_epoch(from_dir / boost::filesystem::path(std::string(epoch_file_name)));
