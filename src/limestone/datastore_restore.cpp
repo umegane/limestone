@@ -24,8 +24,6 @@
 
 namespace limestone::api {
 
-static constexpr const std::string_view leveldb_dir = "leveldb";  // NOLINT
-
 status datastore::restore(std::string_view from, bool keep_backup) {
     DVLOG(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << (keep_backup ? "true" : "false");
 

@@ -31,7 +31,7 @@ public:
     constexpr static const char* file_name_ = "snapshot";
 
     snapshot() = default;
-    explicit snapshot(boost::filesystem::path dir);
+    explicit snapshot(boost::filesystem::path& dir);
     
     cursor& get_cursor();
 

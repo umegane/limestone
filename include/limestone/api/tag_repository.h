@@ -29,7 +29,7 @@ public:
 
     std::vector<epoch_tag>& list();
 
-    void register_tag(std::string name, std::string comments);
+    void register_tag(std::string& name, std::string& comments);
 
     std::optional<epoch_tag> find(std::string_view name);
 

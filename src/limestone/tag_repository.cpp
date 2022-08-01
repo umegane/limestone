@@ -26,7 +26,7 @@ std::vector<epoch_tag>& tag_repository::list() {
     return list_;
 }
 
-void tag_repository::register_tag(std::string name, std::string comments) {
+void tag_repository::register_tag(std::string& name, std::string& comments) {
     map_.emplace(name, epoch_tag(name, comments));
 }
 
