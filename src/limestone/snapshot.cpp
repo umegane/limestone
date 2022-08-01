@@ -22,7 +22,7 @@
 
 namespace limestone::api {  // FIXME fill implementation
 
-snapshot::snapshot(boost::filesystem::path dir) : dir_(dir / boost::filesystem::path(subdirectory_name_)) {
+snapshot::snapshot(boost::filesystem::path& dir) : dir_(dir / boost::filesystem::path(subdirectory_name_)) {
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(dir_, error);
     if (!result_check || error) {

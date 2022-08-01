@@ -27,7 +27,7 @@
 
 namespace limestone::api {
 
-datastore::datastore() {}
+datastore::datastore() = default;
 
 datastore::datastore(configuration const& conf) {
     location_ = conf.data_locations_.at(0);
@@ -49,7 +49,7 @@ datastore::datastore(configuration const& conf) {
 datastore::~datastore() = default;
 
 void datastore::recover([[maybe_unused]] bool overwrite) {
-    check_before_ready(__func__);
+    check_before_ready(static_cast<const char*>(__func__));
 }
 
 void datastore::ready() {
@@ -58,18 +58,18 @@ void datastore::ready() {
 }
 
 snapshot* datastore::get_snapshot() {
-    check_after_ready(__func__);
+    check_after_ready(static_cast<const char*>(__func__));
     DVLOG(log_debug) << "returns snapshot";
     return snapshot_.get();
 }
 
 std::shared_ptr<snapshot> datastore::shared_snapshot() {
-    check_after_ready(__func__);
+    check_after_ready(static_cast<const char*>(__func__));
     return snapshot_;
 }
 
-log_channel& datastore::create_channel(boost::filesystem::path location) {
-    check_before_ready(__func__);
+log_channel& datastore::create_channel(const boost::filesystem::path& location) {
+    check_before_ready(static_cast<const char*>(__func__));
     
     std::lock_guard<std::mutex> lock(mtx_channel_);
     
@@ -81,7 +81,7 @@ log_channel& datastore::create_channel(boost::filesystem::path location) {
 epoch_id_type datastore::last_epoch() { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
 
 void datastore::switch_epoch(epoch_id_type new_epoch_id) {
-    check_after_ready(__func__);
+    check_after_ready(static_cast<const char*>(__func__));
 
     auto neid = static_cast<std::uint64_t>(new_epoch_id);
     if (neid <= epoch_id_switched_.load()) {
@@ -100,7 +100,7 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) {
 }
 
 bool datastore::update_min_epoch_id() {
-    epoch_id_type min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
+    auto min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
     std::uint64_t max_finished_epoch = 0;
 
     for (const auto& e : log_channels_) {
@@ -129,17 +129,17 @@ bool datastore::update_min_epoch_id() {
 }
 
 void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) {
-    check_before_ready(__func__);
-    persistent_callback_ = callback;
+    check_before_ready(static_cast<const char*>(__func__));
+    persistent_callback_ = std::move(callback);
 }
 
 void datastore::switch_safe_snapshot([[maybe_unused]] write_version_type write_version, [[maybe_unused]] bool inclusive) {
-    check_after_ready(__func__);
+    check_after_ready(static_cast<const char*>(__func__));
 }
 
 void datastore::add_snapshot_callback(std::function<void(write_version_type)> callback) {
-    check_before_ready(__func__);
-    snapshot_callback_ = callback;
+    check_before_ready(static_cast<const char*>(__func__));
+    snapshot_callback_ = std::move(callback);
 }
 
 std::future<void> datastore::shutdown() {
@@ -156,25 +156,25 @@ tag_repository& datastore::epoch_tag_repository() {
     return tag_repository_;
 }
 
-void datastore::recover([[maybe_unused]] epoch_tag tag) {
-    check_before_ready(__func__);
+void datastore::recover([[maybe_unused]] const epoch_tag& tag) {
+    check_before_ready(static_cast<const char*>(__func__));
 }
 
-void datastore::add_file(boost::filesystem::path file) {
+void datastore::add_file(const boost::filesystem::path& file) {
     std::lock_guard<std::mutex> lock(mtx_files_);
 
     files_.insert(file);
 }
 
-void datastore::check_after_ready(const char* func) {
+void datastore::check_after_ready(std::string_view func) {
     if (state_ == state::not_ready) {
-        LOG(ERROR) << func << " called before ready()";
+        DVLOG(log_debug) << func << " called before ready()";
     }
 }
 
-void datastore::check_before_ready(const char* func) {
+void datastore::check_before_ready(std::string_view func) {
     if (state_ != state::not_ready) {
-        LOG(ERROR) << func << " called after ready()";
+        DVLOG(log_debug) << func << " called after ready()";
     }
 }
 

@@ -41,7 +41,7 @@ private:
      * @brief For PITR and major write version
      * 
      */
-    epoch_id_type epoch_number_;
+    epoch_id_type epoch_number_{};
         
     /**
      * @brief The order in the same epoch.
@@ -49,7 +49,7 @@ private:
      * 1 bits: 0 - short tx, 1 - long tx.
      * 63 bits: the order between short tx or long tx id.
      */
-    std::uint64_t minor_write_version_;
+    std::uint64_t minor_write_version_{};
 };
 
 } // namespace limestone::api

@@ -117,7 +117,7 @@ public:
      * @return the reference of the log_channel
      * @attention this function should be called before the ready() is called.
      */
-    log_channel& create_channel(boost::filesystem::path location);
+    log_channel& create_channel(const boost::filesystem::path& location);
 
     /**
      * @brief provide the largest epoch ID
@@ -185,7 +185,7 @@ public:
      * @detail create a snapshot file for the specified epoch.
      * @attention this function should be called before the ready() is called.
      */
-    void recover(epoch_tag);
+    void recover(const epoch_tag&);
 
 protected:
     std::vector<std::unique_ptr<log_channel>> log_channels_;  // place in protectes region for tests
@@ -216,15 +216,15 @@ private:
     std::mutex mtx_channel_{};
     std::mutex mtx_files_{};
 
-    void add_file(boost::filesystem::path file);
+    void add_file(const boost::filesystem::path& file);
 
     bool update_min_epoch_id();
 
     state state_{};
     
-    void check_after_ready(const char* func);
+    void check_after_ready(std::string_view func);
 
-    void check_before_ready(const char* func);
+    void check_before_ready(std::string_view func);
 
     /**
      * @brief create snapshot from log files stored in the location directory

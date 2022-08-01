@@ -24,7 +24,7 @@
 namespace limestone::api {
 
 log_channel::log_channel(boost::filesystem::path location, std::size_t id, datastore* envelope)
-    : envelope_(envelope), location_(location), id_(id)
+    : envelope_(envelope), location_(std::move(location)), id_(id)
 {
     std::stringstream ss;
     ss << prefix << std::setw(4) << std::setfill('0') << std::dec << id_;
@@ -38,7 +38,7 @@ void log_channel::begin_session() {
     } while (current_epoch_id_.load() != envelope_->epoch_id_switched_.load());
 
     auto log_file = file_path();
-    strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+    strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
     if (!registered_) {
         envelope_->add_file(log_file);
         registered_ = true;
@@ -54,7 +54,7 @@ void log_channel::end_session() {
     strm_.close();
 }
 
-void log_channel::abort_session([[maybe_unused]] status status_code, [[maybe_unused]] std::string message) {
+void log_channel::abort_session([[maybe_unused]] status status_code, [[maybe_unused]] const std::string& message) {
 }
 
 void log_channel::add_entry(storage_id_type storage_id, std::string_view key, std::string_view value, write_version_type write_version) {

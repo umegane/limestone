@@ -33,12 +33,12 @@ public:
      * @brief create new object
      * @param dir the directory where LevelDB files will be placed
      */
-    leveldb_wrapper(boost::filesystem::path dir) : lvldb_path_(dir / boost::filesystem::path(std::string(leveldb_dir))) {
+    explicit leveldb_wrapper(const boost::filesystem::path& dir) : lvldb_path_(dir / boost::filesystem::path(std::string(leveldb_dir))) {
         clear_directory();
         
         leveldb::Options options;
         options.create_if_missing = true;
-        if (leveldb::Status status = leveldb::DB::Open(options, lvldb_path_.string(), &lvldb_); status.ok() == false) {
+        if (leveldb::Status status = leveldb::DB::Open(options, lvldb_path_.string(), &lvldb_); !status.ok()) {
             LOG(ERROR) << "Unable to open/create LevelDB database, status = " << status.ToString();
             std::abort();
         }
@@ -78,7 +78,7 @@ private:
     }
 };
 
-static epoch_id_type last_durable_epoch(boost::filesystem::path file) {
+static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) {
     boost::filesystem::ifstream istrm;
     log_entry e;
     istrm.open(file, std::ios_base::in | std::ios_base::binary);
@@ -94,7 +94,7 @@ void datastore::create_snapshot() {
     epoch_id_type ld_epoch = last_durable_epoch(from_dir / boost::filesystem::path(std::string(epoch_file_name)));
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
-        if (p.filename().string().substr(0, log_channel::prefix.length()).compare(log_channel::prefix) == 0) {
+        if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
             DVLOG(log_debug) << "processing pwal file: " << p.filename().string();
             log_entry e;
             epoch_id_type current_epoch{UINT64_MAX};
@@ -140,12 +140,12 @@ void datastore::create_snapshot() {
 
     boost::filesystem::ofstream ostrm{};
     ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-    leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());
+    leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical leveldb usage)
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         log_entry::write(ostrm, it->key().ToString(), it->value().ToString());
     }
     ostrm.close();
-    delete it;
+    delete it;  // NOLINT (typical leveldb usage)
 }
 
 } // namespace limestone::api

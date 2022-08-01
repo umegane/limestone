@@ -30,7 +30,7 @@ class log_entry;
 
 class cursor {
 public:
-    cursor(boost::filesystem::path file);
+    cursor(const boost::filesystem::path& file);
     ~cursor();
 
     bool next();
