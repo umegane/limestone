@@ -109,21 +109,21 @@ TEST_F(multiple_recover_test, two_recovery) {
     std::unordered_map<std::string, std::pair<limestone::api::storage_id_type, std::string>> expectation{ {"k0", {0, "v0"}}, {"k1", {1, "v1"}}, };
 
     // create snapshot
-    limestone::api::snapshot* ss{datastore->get_snapshot()};
+    limestone::api::snapshot& ss{datastore->get_snapshot()};
 
     for(std::size_t i = 0; i< 2; i++) {
-        ASSERT_TRUE(ss->get_cursor().next());
+        ASSERT_TRUE(ss.get_cursor().next());
         std::string buf{};
-        ss->get_cursor().key(buf);
+        ss.get_cursor().key(buf);
         auto it = expectation.find(buf);
         ASSERT_FALSE(it == expectation.end());
-        ss->get_cursor().value(buf);
+        ss.get_cursor().value(buf);
         ASSERT_EQ(buf, it->second.second);
-        ASSERT_EQ(ss->get_cursor().storage(), it->second.first);
+        ASSERT_EQ(ss.get_cursor().storage(), it->second.first);
         expectation.erase(it);
     }
     ASSERT_TRUE(expectation.empty());
-    ASSERT_FALSE(ss->get_cursor().next()); // nothing
+    ASSERT_FALSE(ss.get_cursor().next()); // nothing
 
     // cleanup
     datastore->shutdown();

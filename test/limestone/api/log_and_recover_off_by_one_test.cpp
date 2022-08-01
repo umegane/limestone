@@ -94,27 +94,27 @@ TEST_F(log_and_recover_off_by_one_test, log_and_recovery) {
     datastore_->ready();
 
     // create snapshot
-    limestone::api::snapshot* ss{datastore_->get_snapshot()};
-    ASSERT_TRUE(ss->get_cursor().next());
+    limestone::api::snapshot& ss{datastore_->get_snapshot()};
+    ASSERT_TRUE(ss.get_cursor().next());
     std::string buf{};
 
-    ss->get_cursor().key(buf);
+    ss.get_cursor().key(buf);
     auto it1 = expectation.find(buf);
     ASSERT_FALSE(it1 == expectation.end());
-    ss->get_cursor().value(buf);
+    ss.get_cursor().value(buf);
     ASSERT_EQ(buf, it1->second);
-    ASSERT_EQ(ss->get_cursor().storage(), st);
+    ASSERT_EQ(ss.get_cursor().storage(), st);
     expectation.erase(it1);
-    ASSERT_TRUE(ss->get_cursor().next());
+    ASSERT_TRUE(ss.get_cursor().next());
 
-    ss->get_cursor().key(buf);
+    ss.get_cursor().key(buf);
     auto it2 = expectation.find(buf);
     ASSERT_FALSE(it2 == expectation.end());
-    ss->get_cursor().value(buf);
+    ss.get_cursor().value(buf);
     ASSERT_EQ(buf, it2->second);
-    ASSERT_EQ(ss->get_cursor().storage(), st);
+    ASSERT_EQ(ss.get_cursor().storage(), st);
     expectation.erase(it2);
-    ASSERT_FALSE(ss->get_cursor().next());
+    ASSERT_FALSE(ss.get_cursor().next());
 
     ASSERT_TRUE(expectation.empty());
     

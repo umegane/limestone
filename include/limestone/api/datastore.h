@@ -78,7 +78,7 @@ public:
      * @attention this function is not thread-safe.
      * @note overwrite flag is deplicated
      */
-    void recover(bool overwrite = true);
+    void recover();
 
     /**
      * @brief restore log files, etc. located at from directory
@@ -101,7 +101,7 @@ public:
      * @details snapshot used is location_ / snapshot::subdirectory_name_ / snapshot::file_name_
      * @return a pointer to the object associated with the latest available snapshot
      */
-    snapshot* get_snapshot();
+    snapshot& get_snapshot();
 
     /**
      * @brief provides a shared pointer of the snapshot object
