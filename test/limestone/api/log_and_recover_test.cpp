@@ -89,15 +89,15 @@ TEST_F(log_and_recover_test, recovery) {
     datastore_->ready();
 
     // create snapshot
-    limestone::api::snapshot* ss{datastore_->get_snapshot()};
-    ASSERT_TRUE(ss->get_cursor().next()); // point first
+    limestone::api::snapshot& ss{datastore_->get_snapshot()};
+    ASSERT_TRUE(ss.get_cursor().next()); // point first
     std::string buf{};
-    ss->get_cursor().key(buf);
+    ss.get_cursor().key(buf);
     ASSERT_EQ(buf, "k");
-    ss->get_cursor().value(buf);
+    ss.get_cursor().value(buf);
     ASSERT_EQ(buf, "v");
-    ASSERT_EQ(ss->get_cursor().storage(), 2);
-    ASSERT_FALSE(ss->get_cursor().next()); // nothing
+    ASSERT_EQ(ss.get_cursor().storage(), 2);
+    ASSERT_FALSE(ss.get_cursor().next()); // nothing
 
     // cleanup
     datastore_->shutdown();
@@ -117,15 +117,15 @@ TEST_F(log_and_recover_test, recovery_interrupt_datastore_object_reallocation) {
     datastore_->ready();
 
     // create snapshot
-    limestone::api::snapshot* ss{datastore_->get_snapshot()};
-    ASSERT_TRUE(ss->get_cursor().next()); // point first
+    limestone::api::snapshot& ss{datastore_->get_snapshot()};
+    ASSERT_TRUE(ss.get_cursor().next()); // point first
     std::string buf{};
-    ss->get_cursor().key(buf);
+    ss.get_cursor().key(buf);
     ASSERT_EQ(buf, "k");
-    ss->get_cursor().value(buf);
+    ss.get_cursor().value(buf);
     ASSERT_EQ(buf, "v");
-    ASSERT_EQ(ss->get_cursor().storage(), 2);
-    ASSERT_FALSE(ss->get_cursor().next()); // nothing
+    ASSERT_EQ(ss.get_cursor().storage(), 2);
+    ASSERT_FALSE(ss.get_cursor().next()); // nothing
 
     // cleanup
     datastore_->shutdown();

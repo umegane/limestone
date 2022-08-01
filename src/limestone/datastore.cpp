@@ -48,7 +48,7 @@ datastore::datastore(configuration const& conf) {
 
 datastore::~datastore() = default;
 
-void datastore::recover([[maybe_unused]] bool overwrite) {
+void datastore::recover() {
     check_before_ready(static_cast<const char*>(__func__));
 }
 
@@ -57,10 +57,10 @@ void datastore::ready() {
     state_ = state::ready;
 }
 
-snapshot* datastore::get_snapshot() {
+snapshot& datastore::get_snapshot() {
     check_after_ready(static_cast<const char*>(__func__));
     DVLOG(log_debug) << "returns snapshot";
-    return snapshot_.get();
+    return *snapshot_.get();
 }
 
 std::shared_ptr<snapshot> datastore::shared_snapshot() {
