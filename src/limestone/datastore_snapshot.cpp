@@ -25,7 +25,7 @@
 
 namespace limestone::api {
 
-static constexpr const std::string_view leveldb_dir = "leveldb";  // NOLINT
+static constexpr const std::string_view leveldb_dir = "leveldb";
 
 class leveldb_wrapper {
 public:
@@ -140,12 +140,12 @@ void datastore::create_snapshot() {
 
     boost::filesystem::ofstream ostrm{};
     ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-    leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical leveldb usage)
+    leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         log_entry::write(ostrm, it->key().ToString(), it->value().ToString());
     }
     ostrm.close();
-    delete it;  // NOLINT (typical leveldb usage)
+    delete it;  // NOLINT (typical usage of leveldb)
 }
 
 } // namespace limestone::api

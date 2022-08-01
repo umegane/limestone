@@ -60,7 +60,7 @@ void datastore::ready() {
 snapshot& datastore::get_snapshot() {
     check_after_ready(static_cast<const char*>(__func__));
     DVLOG(log_debug) << "returns snapshot";
-    return *snapshot_.get();
+    return *snapshot_;
 }
 
 std::shared_ptr<snapshot> datastore::shared_snapshot() {
