@@ -143,11 +143,11 @@ public:
     }
 
     void write_version(write_version_type& buf) {
-        memcpy(reinterpret_cast<char*>(&buf), value_etc_.data(), sizeof(epoch_id_type) + sizeof(std::uint64_t));  // NOLINT
+        memcpy(static_cast<void*>(&buf), value_etc_.data(), sizeof(epoch_id_type) + sizeof(std::uint64_t));
     }
     storage_id_type storage() {
         storage_id_type storage_id{};
-        memcpy(reinterpret_cast<char*>(&storage_id), key_sid_.data(), sizeof(storage_id_type));  // NOLINT
+        memcpy(static_cast<void*>(&storage_id), key_sid_.data(), sizeof(storage_id_type));
         return storage_id;
     }
     void value(std::string& buf) {
@@ -172,12 +172,12 @@ public:
     }
     static epoch_id_type write_version_epoch_number(std::string_view value_etc) {
         epoch_id_type epoch_id{};
-        memcpy(reinterpret_cast<char*>(&epoch_id), value_etc.data(), sizeof(epoch_id_type));  // NOLINT
+        memcpy(static_cast<void*>(&epoch_id), value_etc.data(), sizeof(epoch_id_type));
         return epoch_id;
     }
     static std::uint64_t write_version_minor_write_version(std::string_view value_etc) {
         std::uint64_t minor_write_version{};
-        memcpy(reinterpret_cast<char*>(&minor_write_version), value_etc.data() + sizeof(epoch_id_type), sizeof(std::uint64_t));  // NOLINT
+        memcpy(static_cast<void*>(&minor_write_version), value_etc.data() + sizeof(epoch_id_type), sizeof(std::uint64_t));
         return minor_write_version;
     }
 
