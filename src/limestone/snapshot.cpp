@@ -22,36 +22,25 @@
 
 namespace limestone::api {  // FIXME fill implementation
 
-snapshot::snapshot(boost::filesystem::path& dir) : dir_(dir / boost::filesystem::path(subdirectory_name_)) {
-    boost::system::error_code error;
-    const bool result_check = boost::filesystem::exists(dir_, error);
-    if (!result_check || error) {
-        const bool result_mkdir = boost::filesystem::create_directory(dir_, error);
-        if (!result_mkdir || error) {
-            LOG(ERROR) << "fail to create directory";
-            std::abort();
-        }
-    }
+snapshot::snapshot(const boost::filesystem::path& location) noexcept : dir_(location / boost::filesystem::path(std::string(subdirectory_name_))) {
 }
 
-cursor& snapshot::get_cursor() {
-    if (!cursor_) {
-        cursor_ = std::make_unique<cursor>(file_path());
-    }
-    DVLOG(log_debug) << "returns cursor";
-    return *cursor_;
+std::unique_ptr<cursor> snapshot::get_cursor() const noexcept {
+    return std::make_unique<cursor>(file_path());
 }
 
-cursor& snapshot::find([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key) {
+std::unique_ptr<cursor> snapshot::find([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key) const noexcept {
+    LOG(ERROR) << "not implemented";
     std::abort();  // FIXME should implement
 }
 
-cursor& snapshot::scan([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key, [[maybe_unused]] bool inclusive) {
+std::unique_ptr<cursor> snapshot::scan([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key, [[maybe_unused]] bool inclusive) const noexcept {
+    LOG(ERROR) << "not implemented";
     std::abort();  // FIXME should implement
 }
 
-boost::filesystem::path snapshot::file_path() {
-    return dir_ / boost::filesystem::path(file_name_);
+boost::filesystem::path snapshot::file_path() const noexcept {
+    return dir_ / boost::filesystem::path(std::string(file_name_));
 }
 
 } // namespace limestone::api

@@ -52,13 +52,13 @@ public:
         clear_directory();
     }
 
-    leveldb_wrapper() = delete;
-    leveldb_wrapper(leveldb_wrapper const& other) = delete;
-    leveldb_wrapper& operator=(leveldb_wrapper const& other) = delete;
+    leveldb_wrapper() noexcept = delete;
+    leveldb_wrapper(leveldb_wrapper const& other) noexcept = delete;
+    leveldb_wrapper& operator=(leveldb_wrapper const& other) noexcept = delete;
     leveldb_wrapper(leveldb_wrapper&& other) noexcept = delete;
     leveldb_wrapper& operator=(leveldb_wrapper&& other) noexcept = delete;
 
-    leveldb::DB* db() {
+    leveldb::DB* db() const noexcept {
         return lvldb_;
     }
     
@@ -66,7 +66,7 @@ private:
     leveldb::DB* lvldb_{};
     boost::filesystem::path lvldb_path_;
 
-    void clear_directory() {
+    void clear_directory() const noexcept {
         if (boost::filesystem::exists(lvldb_path_)) {
             if (boost::filesystem::is_directory(lvldb_path_)) {
                 boost::filesystem::remove_all(lvldb_path_);
@@ -78,7 +78,7 @@ private:
     }
 };
 
-static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) {
+static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) noexcept {
     boost::filesystem::ifstream istrm;
     log_entry e;
     istrm.open(file, std::ios_base::in | std::ios_base::binary);
@@ -87,7 +87,7 @@ static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) {
     return e.epoch_id();
 }
 
-void datastore::create_snapshot() {
+void datastore::create_snapshot() noexcept {
     auto& from_dir = location_;
     auto lvldb = std::make_unique<leveldb_wrapper>(from_dir);
 
@@ -138,8 +138,24 @@ void datastore::create_snapshot() {
         }
     }
 
+    boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));
+    boost::system::error_code error;
+    const bool result_check = boost::filesystem::exists(sub_dir, error);
+    if (!result_check || error) {
+        const bool result_mkdir = boost::filesystem::create_directory(sub_dir, error);
+        if (!result_mkdir || error) {
+            LOG(ERROR) << "fail to create directory";
+            std::abort();
+        }
+    }
+
     boost::filesystem::ofstream ostrm{};
-    ostrm.open(snapshot_->file_path(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+    boost::filesystem::path snapshot_file = sub_dir / boost::filesystem::path(std::string(snapshot::file_name_));
+    ostrm.open(snapshot_file, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+    if( ostrm.fail() ){
+        LOG(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
+        std::abort();
+    }
     leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         log_entry::write(ostrm, it->key().ToString(), it->value().ToString());

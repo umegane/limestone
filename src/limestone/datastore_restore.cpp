@@ -24,7 +24,7 @@
 
 namespace limestone::api {
 
-status datastore::restore(std::string_view from, bool keep_backup) {
+status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
     DVLOG(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << (keep_backup ? "true" : "false");
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {

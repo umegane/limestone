@@ -24,6 +24,10 @@ namespace limestone::api {
 
 cursor::cursor(const boost::filesystem::path& file) : log_entry_(std::make_unique<log_entry>()) {
     istrm_.open(file, std::ios_base::in | std::ios_base::binary );
+    if (!istrm_.good()) {
+        LOG(ERROR) << "file stream of the cursor is not good (" << file << ")";
+        std::abort();
+    }
 }
 cursor::~cursor() {
     istrm_.close();

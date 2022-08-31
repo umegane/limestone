@@ -27,24 +27,30 @@ namespace limestone::api {
 
 class snapshot {
 public:
-    constexpr static const char* subdirectory_name_ = "data";
-    constexpr static const char* file_name_ = "snapshot";
+    /**
+     * @brief directory name of a snapshot
+     */
+    constexpr static const std::string_view subdirectory_name_ = "data";
 
-    snapshot() = default;
-    explicit snapshot(boost::filesystem::path& dir);
-    
-    cursor& get_cursor();
+    /**
+     * @brief file name of a snapshot lodated on the directory named subdirectory_name_
+     */
+    constexpr static const std::string_view file_name_ = "snapshot";
 
-    cursor& find(storage_id_type storage_id, std::string_view entry_key);
+    std::unique_ptr<cursor> get_cursor() const noexcept;
 
-    cursor& scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive);
+    std::unique_ptr<cursor> find(storage_id_type storage_id, std::string_view entry_key) const noexcept;
+
+    std::unique_ptr<cursor> scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive) const noexcept;
 
 private:
-    std::unique_ptr<cursor> cursor_{};
-
     boost::filesystem::path dir_{};
 
-    boost::filesystem::path file_path();
+    boost::filesystem::path file_path() const noexcept;
+
+    snapshot() noexcept = delete;
+
+    explicit snapshot(const boost::filesystem::path& location) noexcept;
 
     friend class datastore;
 };
