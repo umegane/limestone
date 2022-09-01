@@ -146,7 +146,7 @@ std::future<void> datastore::shutdown() noexcept {
 }
 
 backup& datastore::begin_backup() noexcept {
-    backup_ = std::make_unique<backup>(files_);
+    backup_ = std::unique_ptr<backup>(new backup(files_));
     return *backup_;
 }
 

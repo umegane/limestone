@@ -17,21 +17,23 @@
 
 namespace limestone::api {
 
-backup::backup(std::set<boost::filesystem::path>& files) {
+backup::backup(std::set<boost::filesystem::path>& files) noexcept {
     for(auto& e : files) {
         files_.emplace_back(e);
     }
 }
 
-bool backup::is_ready() {
+backup::~backup() noexcept = default;
+
+bool backup::is_ready() const noexcept {
     return true;  // FIXME
 }
 
-bool backup::wait_for_ready([[maybe_unused]] std::size_t duration) {
+bool backup::wait_for_ready([[maybe_unused]] std::size_t duration) const noexcept {
     return true;  // FIXME
 }
 
-std::vector<boost::filesystem::path>& backup::files() {
+std::vector<boost::filesystem::path>& backup::files() noexcept {
     return files_;
 }
 

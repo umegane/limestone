@@ -25,6 +25,9 @@
 
 namespace limestone::api {
 
+/**
+ * @brief a snapshot of the data at a point in time on the data store
+ */
 class snapshot {
 public:
     /**
@@ -37,10 +40,34 @@ public:
      */
     constexpr static const std::string_view file_name_ = "snapshot";
 
+    /**
+     * @brief create a cursor to read the entire contents of the snapshot and returns it
+     * @details the returned cursor points to the first element by calling cursor::next().
+     * @attention this function is thread-safe.
+     * @return unique pointer of the cursor
+     */
     std::unique_ptr<cursor> get_cursor() const noexcept;
 
+    /**
+     * @brief create a cursor for an entry at a given location on the snapshot and returns it
+     * @details the returned cursor will point to the target element by calling cursor::next().
+     * If such an entry does not exist, cursor::next() will return false.
+     * @param storage_id the storage ID of the entry to be found
+     * @param entry_key the key byte string for the entry to be found
+     * @attention this function is thread-safe.
+     * @return unique pointer of the cursor
+     */
     std::unique_ptr<cursor> find(storage_id_type storage_id, std::string_view entry_key) const noexcept;
 
+    /**
+     * @brief create a cursor for the first entry that exists after the given location on the snapshot and returns it
+     * @details the returned cursor will point to the target element by calling cursor::next().
+     * If such an entry does not exist, cursor::next() will return false.
+     * @param storage_id the storage ID of the first entry to be scanned
+     * @param entry_key the key byte string for the first entry to be scanned
+     * @attention this function is thread-safe.
+     * @return unique pointer of the cursor
+     */
     std::unique_ptr<cursor> scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive) const noexcept;
 
 private:

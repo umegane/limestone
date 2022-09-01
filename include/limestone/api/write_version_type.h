@@ -39,7 +39,6 @@ public:
 private:
     /**
      * @brief For PITR and major write version
-     * 
      */
     epoch_id_type epoch_number_{};
         

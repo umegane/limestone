@@ -24,23 +24,44 @@
 
 namespace limestone::api {
 
+class datastore;
+
+/**
+ * @brief class encapsulating backup operations
+ */
 class backup {
 public:
-
-    explicit backup(std::set<boost::filesystem::path>& files);
+    /**
+     * @brief destruct the object
+     */
+    ~backup() noexcept;
     
-    ~backup() = default;  // FIXME
-    
-    bool is_ready();
+    /**
+     * @brief returns whether the current backup operation is available
+     * @return true if the current backup operation is available, false otherwise
+     */
+    bool is_ready() const noexcept;
 
-    bool wait_for_ready(std::size_t duration);
+    /**
+     * @brief wait until backup operation is available
+     * @param duration the maximum time to wait
+     * @return true if the current backup operation is available, false otherwise
+     */
+    bool wait_for_ready(std::size_t duration) const noexcept;
 
-    std::vector<boost::filesystem::path>& files();
+    /**
+     * @brief returns a list of files to be backed up
+     * @returns a list of files to be backed up
+     * @note this operation requires that a backup is available
+     */
+    std::vector<boost::filesystem::path>& files() noexcept;
 
 private:
-    
     std::vector<boost::filesystem::path> files_;
 
+    explicit backup(std::set<boost::filesystem::path>& files) noexcept;
+
+    friend class datastore;
 };
 
 } // namespace limestone::api
