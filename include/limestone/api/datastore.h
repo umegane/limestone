@@ -33,6 +33,7 @@
 #include <limestone/api/epoch_id_type.h>
 #include <limestone/api/write_version_type.h>
 #include <limestone/api/tag_repository.h>
+#include <limestone/api/restore_progress.h>
 
 namespace limestone::api {
 
@@ -48,20 +49,21 @@ class datastore {
      */
     static constexpr const std::string_view epoch_file_name = "epoch";  // NOLINT
 
-enum class state : std::int64_t {
-    not_ready = 0,
-    ready = 1,
-    shutdown = 2,
-};
+    enum class state : std::int64_t {
+        not_ready = 0,
+        ready = 1,
+        shutdown = 2,
+    };
 
 public:
     /**
      * @brief create empty object
+     * @note this is for test purpose only, must not be used for any purpose other than testing
      */
     datastore() noexcept;
 
     /**
-     * @brief create empty object
+     * @brief create an object with the given configuration
      * @param conf a reference to a configuration object used in the object construction
      */
     explicit datastore(configuration const& conf) noexcept;
@@ -88,6 +90,13 @@ public:
      * @return status indicating whether the process ends successfully or not
      */
     status restore(std::string_view from, bool keep_backup) const noexcept;
+
+    /**
+     * @brief returns the status of the restore process that is currently in progress or that has finished immediately before
+     * @attention this function is not thread-safe.
+     * @return the status of the restore process
+     */
+    restore_progress restore_status() const noexcept;
 
     /**
      * @brief transition this object to an operational state

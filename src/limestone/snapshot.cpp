@@ -26,7 +26,7 @@ snapshot::snapshot(const boost::filesystem::path& location) noexcept : dir_(loca
 }
 
 std::unique_ptr<cursor> snapshot::get_cursor() const noexcept {
-    return std::make_unique<cursor>(file_path());
+    return std::unique_ptr<cursor>(new cursor(file_path()));
 }
 
 std::unique_ptr<cursor> snapshot::find([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key) const noexcept {

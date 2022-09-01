@@ -126,7 +126,7 @@ public:
     void truncate_storage(storage_id_type storage_id, write_version_type write_version ) noexcept;
 
     /**
-     * @brief for test purpose only, must not be used for any purpose other than testing
+     * @brief this is for test purpose only, must not be used for any purpose other than testing
      */
     boost::filesystem::path file_path() const noexcept;
 

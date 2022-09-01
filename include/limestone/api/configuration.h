@@ -21,14 +21,35 @@
 
 namespace limestone::api {
 
+class datastore;
+
+/**
+ * @brief configuration for datastore
+ */
 class configuration {
 public:
+    /**
+     * @brief create empty object
+     */
     configuration();
-    configuration(std::vector<boost::filesystem::path>& data_locations, boost::filesystem::path metadata_location);
-    configuration(std::vector<boost::filesystem::path>&& data_locations, boost::filesystem::path metadata_location);
+
+    /**
+     * @brief create a object
+     * @param data_locations the list of data locations
+     * @param metadata_location the location of the metadata
+     */
+    configuration(const std::vector<boost::filesystem::path>& data_locations, const boost::filesystem::path& metadata_location) noexcept;
+
+    /**
+     * @brief create a object
+     * @param data_locations the list of data locations
+     * @param metadata_location the location of the metadata
+     */
+    configuration(const std::vector<boost::filesystem::path>&& data_locations, const boost::filesystem::path& metadata_location) noexcept;
 
 private:
     std::vector<boost::filesystem::path> data_locations_{};
+
     boost::filesystem::path metadata_location_{};
 
     friend class datastore;

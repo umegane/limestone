@@ -18,13 +18,15 @@
 namespace limestone::api {
 
 configuration::configuration() = default;
-configuration::configuration(std::vector<boost::filesystem::path>& data_locations, boost::filesystem::path metadata_location)
+
+configuration::configuration(const std::vector<boost::filesystem::path>& data_locations, const boost::filesystem::path& metadata_location) noexcept
     : metadata_location_(std::move(metadata_location)) {
     for (auto &&e : data_locations) {
         data_locations_.emplace_back(e);
     }
 }
-configuration::configuration(std::vector<boost::filesystem::path>&& data_locations, boost::filesystem::path metadata_location)
+
+configuration::configuration(const std::vector<boost::filesystem::path>&& data_locations, const boost::filesystem::path& metadata_location) noexcept
     : metadata_location_(std::move(metadata_location)) {
     for (auto &&e : data_locations) {
         data_locations_.emplace_back(e);
