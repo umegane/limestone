@@ -74,7 +74,7 @@ TEST_F(log_channel_test, number_and_backup) {
 
     EXPECT_EQ(datastore_->log_channels().size(), 4);
 
-    auto backup = datastore_->begin_backup();
+    auto& backup = datastore_->begin_backup();
     auto files = backup.files();
 
     EXPECT_EQ(files.size(), 5);

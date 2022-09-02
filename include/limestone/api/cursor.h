@@ -39,6 +39,11 @@ public:
      */
     ~cursor() noexcept;
 
+    cursor(cursor const& other) = delete;
+    cursor& operator=(cursor const& other) = delete;
+    cursor(cursor&& other) noexcept = delete;
+    cursor& operator=(cursor&& other) noexcept = delete;
+
     /**
      * @brief change the current cursor to point to the next entry
      * @attention this function is not thread-safe.
@@ -75,7 +80,7 @@ private:
     std::unique_ptr<log_entry> log_entry_;
     std::vector<large_object_view> large_objects_{};
 
-    cursor(const boost::filesystem::path& file) noexcept;
+    explicit cursor(const boost::filesystem::path& file) noexcept;
  
     friend class snapshot;
 };

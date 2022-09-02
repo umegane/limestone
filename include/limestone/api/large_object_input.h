@@ -28,6 +28,11 @@ public:
     explicit large_object_input(boost::filesystem::path path);
     ~large_object_input();
 
+    large_object_input(large_object_input const& other) = delete;
+    large_object_input& operator=(large_object_input const& other) = delete;
+    large_object_input(large_object_input&& other) noexcept = delete;
+    large_object_input& operator=(large_object_input&& other) noexcept = delete;
+
     void locate(boost::filesystem::path path);
 
     void detach();

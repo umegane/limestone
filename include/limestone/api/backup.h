@@ -35,19 +35,24 @@ public:
      * @brief destruct the object
      */
     ~backup() noexcept;
-    
+
+    backup(backup const& other) = delete;
+    backup& operator=(backup const& other) = delete;
+    backup(backup&& other) noexcept = delete;
+    backup& operator=(backup&& other) noexcept = delete;
+
     /**
      * @brief returns whether the current backup operation is available
      * @return true if the current backup operation is available, false otherwise
      */
-    bool is_ready() const noexcept;
+    [[nodiscard]] bool is_ready() const noexcept;
 
     /**
      * @brief wait until backup operation is available
      * @param duration the maximum time to wait
      * @return true if the current backup operation is available, false otherwise
      */
-    bool wait_for_ready(std::size_t duration) const noexcept;
+    [[nodiscard]] bool wait_for_ready(std::size_t duration) const noexcept;
 
     /**
      * @brief returns a list of files to be backed up

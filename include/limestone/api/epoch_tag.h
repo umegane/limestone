@@ -35,28 +35,28 @@ public:
      * @attention this function is thread-safe.
      * @return the tag name
      */
-    std::string_view name() const noexcept { return name_; }
+    [[nodiscard]] std::string_view name() const noexcept { return name_; }
 
     /**
      * @brief returns the comment added to the tag
      * @attention this function is thread-safe.
      * @return the comment
      */
-    std::string_view comments() const noexcept { return comments_; }
+    [[nodiscard]] std::string_view comments() const noexcept { return comments_; }
 
     /**
      * @brief returns the epoch ID corresponding to the tag
      * @attention this function is thread-safe.
      * @return the epoch ID
      */
-    epoch_id_type epoch_id() const noexcept { return epoch_id_; }
+    [[nodiscard]] epoch_id_type epoch_id() const noexcept { return epoch_id_; }
 
     /**
      * @brief returns the time the tag was created
      * @attention this function is thread-safe.
      * @return the time the tag was created
      */
-    std::chrono::system_clock::time_point timestamp() const noexcept { return timestamp_; }
+    [[nodiscard]] std::chrono::system_clock::time_point timestamp() const noexcept { return timestamp_; }
 
 private:
     const std::string name_;

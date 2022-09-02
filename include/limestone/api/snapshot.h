@@ -30,6 +30,8 @@ namespace limestone::api {
  */
 class snapshot {
 public:
+    snapshot() noexcept = delete;
+
     /**
      * @brief directory name of a snapshot
      */
@@ -46,7 +48,7 @@ public:
      * @attention this function is thread-safe.
      * @return unique pointer of the cursor
      */
-    std::unique_ptr<cursor> get_cursor() const noexcept;
+    [[nodiscard]] std::unique_ptr<cursor> get_cursor() const noexcept;
 
     /**
      * @brief create a cursor for an entry at a given location on the snapshot and returns it
@@ -57,7 +59,7 @@ public:
      * @attention this function is thread-safe.
      * @return unique pointer of the cursor
      */
-    std::unique_ptr<cursor> find(storage_id_type storage_id, std::string_view entry_key) const noexcept;
+    [[nodiscard]] std::unique_ptr<cursor> find(storage_id_type storage_id, std::string_view entry_key) const noexcept;
 
     /**
      * @brief create a cursor for the first entry that exists after the given location on the snapshot and returns it
@@ -68,14 +70,12 @@ public:
      * @attention this function is thread-safe.
      * @return unique pointer of the cursor
      */
-    std::unique_ptr<cursor> scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive) const noexcept;
+    [[nodiscard]] std::unique_ptr<cursor> scan(storage_id_type storage_id, std::string_view entry_key, bool inclusive) const noexcept;
 
 private:
     boost::filesystem::path dir_{};
 
-    boost::filesystem::path file_path() const noexcept;
-
-    snapshot() noexcept = delete;
+    [[nodiscard]] boost::filesystem::path file_path() const noexcept;
 
     explicit snapshot(const boost::filesystem::path& location) noexcept;
 
