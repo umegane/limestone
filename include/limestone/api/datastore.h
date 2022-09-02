@@ -73,6 +73,11 @@ public:
      */
     ~datastore() noexcept;
 
+    datastore(datastore const& other) = delete;
+    datastore& operator=(datastore const& other) = delete;
+    datastore(datastore&& other) noexcept = delete;
+    datastore& operator=(datastore&& other) noexcept = delete;
+
     /**
      * @brief create snapshot from log files stored in location_
      * @details file name of snapshot to be created is snapshot::file_name_ which is stored in location_ / snapshot::subdirectory_name_.
@@ -197,7 +202,7 @@ public:
     void recover(const epoch_tag&) const noexcept;
 
 protected:
-    std::vector<std::unique_ptr<log_channel>> log_channels_;  // place in protectes region for tests
+    std::vector<std::unique_ptr<log_channel>> log_channels_;  //  NOLINT (place in protectes region for tests)
     
 private:
     boost::filesystem::path location_{};

@@ -15,10 +15,6 @@
  */
 #pragma once
 
-// #include <string_view>
-// #include <string>
-// #include <chrono>
-
 #include <limestone/status.h>
 
 namespace limestone::api {
@@ -41,6 +37,8 @@ public:
         canceled = -2,
     };
 
+    restore_progress() = delete;
+
 private:
     const status status_;
 
@@ -51,8 +49,6 @@ private:
     const float progress_;
 
     friend class datastore;
-
-    restore_progress();
 };
     
 } // namespace limestone::api
