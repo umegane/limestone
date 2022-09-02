@@ -27,9 +27,9 @@
 
 namespace limestone::api {
 
-datastore::datastore() {}
+datastore::datastore() noexcept = default;
 
-datastore::datastore(configuration const& conf) {
+datastore::datastore(configuration const& conf) noexcept {
     location_ = conf.data_locations_.at(0);
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
@@ -40,49 +40,46 @@ datastore::datastore(configuration const& conf) {
             std::abort();
         }
     }
-    snapshot_ = std::make_shared<snapshot>(location_);
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
     add_file(epoch_file_path_);
     DVLOG(log_debug) << "datastore is created, location = " << location_.string();
 }
 
-datastore::~datastore() = default;
+datastore::~datastore() noexcept = default;
 
-void datastore::recover(bool overwrite) {
-    check_before_ready(__func__);
-    
-    recover(location_.string(), overwrite);
+void datastore::recover() const noexcept {
+    check_before_ready(static_cast<const char*>(__func__));
 }
 
-void datastore::ready() {
+void datastore::ready() noexcept {
+    create_snapshot();
     state_ = state::ready;
 }
 
-snapshot* datastore::get_snapshot() {
-    check_after_ready(__func__);
-    DVLOG(log_debug) << "returns snapshot";
-    return snapshot_.get();
+std::unique_ptr<snapshot> datastore::get_snapshot() const noexcept {
+    check_after_ready(static_cast<const char*>(__func__));
+    return std::unique_ptr<snapshot>(new snapshot(location_));
 }
 
-std::shared_ptr<snapshot> datastore::shared_snapshot() {
-    check_after_ready(__func__);
-    return snapshot_;
+std::shared_ptr<snapshot> datastore::shared_snapshot() const noexcept {
+    check_after_ready(static_cast<const char*>(__func__));
+    return std::shared_ptr<snapshot>(new snapshot(location_));
 }
 
-log_channel& datastore::create_channel(boost::filesystem::path location) {
-    check_before_ready(__func__);
+log_channel& datastore::create_channel(const boost::filesystem::path& location) noexcept {
+    check_before_ready(static_cast<const char*>(__func__));
     
     std::lock_guard<std::mutex> lock(mtx_channel_);
     
     auto id = log_channel_id_.fetch_add(1);
-    log_channels_.emplace_back(std::make_unique<log_channel>(location, id, this));
+    log_channels_.emplace_back(std::unique_ptr<log_channel>(new log_channel(location, id, *this)));  // contrructor of log_channel is private
     return *log_channels_.at(id);
 }
 
-epoch_id_type datastore::last_epoch() { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
+epoch_id_type datastore::last_epoch() const noexcept { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
 
-void datastore::switch_epoch(epoch_id_type new_epoch_id) {
-    check_after_ready(__func__);
+void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
+    check_after_ready(static_cast<const char*>(__func__));
 
     auto neid = static_cast<std::uint64_t>(new_epoch_id);
     if (neid <= epoch_id_switched_.load()) {
@@ -100,8 +97,8 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) {
     }
 }
 
-bool datastore::update_min_epoch_id() {
-    epoch_id_type min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
+bool datastore::update_min_epoch_id() noexcept {
+    auto min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
     std::uint64_t max_finished_epoch = 0;
 
     for (const auto& e : log_channels_) {
@@ -129,53 +126,53 @@ bool datastore::update_min_epoch_id() {
     return false;
 }
 
-void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) {
-    check_before_ready(__func__);
-    persistent_callback_ = callback;
+void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) noexcept {
+    check_before_ready(static_cast<const char*>(__func__));
+    persistent_callback_ = std::move(callback);
 }
 
-void datastore::switch_safe_snapshot([[maybe_unused]] write_version_type write_version, [[maybe_unused]] bool inclusive) {
-    check_after_ready(__func__);
+void datastore::switch_safe_snapshot([[maybe_unused]] write_version_type write_version, [[maybe_unused]] bool inclusive) const noexcept {
+    check_after_ready(static_cast<const char*>(__func__));
 }
 
-void datastore::add_snapshot_callback(std::function<void(write_version_type)> callback) {
-    check_before_ready(__func__);
-    snapshot_callback_ = callback;
+void datastore::add_snapshot_callback(std::function<void(write_version_type)> callback) noexcept {
+    check_before_ready(static_cast<const char*>(__func__));
+    snapshot_callback_ = std::move(callback);
 }
 
-std::future<void> datastore::shutdown() {
+std::future<void> datastore::shutdown() noexcept {
     state_ = state::shutdown;
     return std::async(std::launch::async, []{ std::this_thread::sleep_for(std::chrono::microseconds(100000)); });
 }
 
-backup& datastore::begin_backup() {
-    backup_ = std::make_unique<backup>(files_);
+backup& datastore::begin_backup() noexcept {
+    backup_ = std::unique_ptr<backup>(new backup(files_));
     return *backup_;
 }
 
-tag_repository& datastore::epoch_tag_repository() {
+tag_repository& datastore::epoch_tag_repository() noexcept {
     return tag_repository_;
 }
 
-void datastore::recover([[maybe_unused]] epoch_tag tag) {
-    check_before_ready(__func__);
+void datastore::recover([[maybe_unused]] const epoch_tag& tag) const noexcept {
+    check_before_ready(static_cast<const char*>(__func__));
 }
 
-void datastore::add_file(boost::filesystem::path file) {
+void datastore::add_file(const boost::filesystem::path& file) noexcept {
     std::lock_guard<std::mutex> lock(mtx_files_);
 
     files_.insert(file);
 }
 
-void datastore::check_after_ready(const char* func) {
+void datastore::check_after_ready(std::string_view func) const noexcept {
     if (state_ == state::not_ready) {
-        LOG(ERROR) << func << " called before ready()";
+        DVLOG(log_debug) << func << " called before ready()";
     }
 }
 
-void datastore::check_before_ready(const char* func) {
+void datastore::check_before_ready(std::string_view func) const noexcept {
     if (state_ != state::not_ready) {
-        LOG(ERROR) << func << " called after ready()";
+        DVLOG(log_debug) << func << " called after ready()";
     }
 }
 

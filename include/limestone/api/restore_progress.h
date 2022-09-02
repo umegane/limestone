@@ -13,13 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <limestone/api/write_version_type.h>
+#pragma once
+
+// #include <string_view>
+// #include <string>
+// #include <chrono>
+
+#include <limestone/status.h>
 
 namespace limestone::api {
 
-write_version_type::write_version_type() = default;
-write_version_type::write_version_type(epoch_id_type epoch_number, std::uint64_t minor_write_version)
-    : epoch_number_(epoch_number), minor_write_version_(minor_write_version) {
-}
+class datastore;
 
+/**
+ * @brief a tag associated with a specific epoch
+ */
+class restore_progress {
+public:
+    /**
+     * @brief type of a result of query processing by restore_status()
+     */
+    enum class status_kind : std::int64_t {
+        prepareing = 0,
+        running = 1,
+        completed = 2,
+        failed = -1,
+        canceled = -2,
+    };
+
+private:
+    const status status_;
+
+    const status_kind comments_;
+
+    const std::string source_;
+
+    const float progress_;
+
+    friend class datastore;
+
+    restore_progress();
+};
+    
 } // namespace limestone::api

@@ -27,26 +27,57 @@
 namespace limestone::api {
 
 class log_entry;
+class snapshot;
 
+/**
+ * @brief a cursor to scan entries on the snapshot
+ */
 class cursor {
 public:
-    cursor(boost::filesystem::path file);
+    /**
+     * @brief destruct the object
+     */
     ~cursor();
 
-    bool next();
+    /**
+     * @brief change the current cursor to point to the next entry
+     * @attention this function is not thread-safe.
+     * @return true if the next entry exists, false otherwise
+     */
+    bool next() noexcept;
 
-    storage_id_type storage();
+    /**
+     * @brief returns the storage ID of the entry at the current cursor position
+     * @return the storage ID of the current entry
+     */
+    storage_id_type storage() const noexcept;
 
-    void key(std::string& buf);
+    /**
+     * @brief returns the key byte string of the entry at the current cursor position
+     * @param buf a reference to a byte string in which the key is stored
+     */
+    void key(std::string& buf) const noexcept;
 
-    void value(std::string& buf);
+    /**
+     * @brief returns the value byte string of the entry at the current cursor position
+     * @param buf a reference to a byte string in which the value is stored
+     */
+    void value(std::string& buf) const noexcept;
 
-    std::vector<large_object_view>& large_objects();
+    /**
+     * @brief returns a list of large objects associated with the entry at the current cursor position
+     * @return a list of large objects associated with the current entry
+     */
+    std::vector<large_object_view>& large_objects() noexcept;
 
 private:
     boost::filesystem::ifstream istrm_{};
     std::unique_ptr<log_entry> log_entry_;
     std::vector<large_object_view> large_objects_{};
+
+    cursor(const boost::filesystem::path& file) noexcept;
+ 
+    friend class snapshot;
 };
 
 } // namespace limestone::api

@@ -22,14 +22,18 @@
 
 namespace limestone::api {
 
-cursor::cursor(boost::filesystem::path file) : log_entry_(std::make_unique<log_entry>()) {
+cursor::cursor(const boost::filesystem::path& file) noexcept : log_entry_(std::make_unique<log_entry>()) {
     istrm_.open(file, std::ios_base::in | std::ios_base::binary );
+    if (!istrm_.good()) {
+        LOG(ERROR) << "file stream of the cursor is not good (" << file << ")";
+        std::abort();
+    }
 }
-cursor::~cursor() {
+cursor::~cursor() noexcept {
     istrm_.close();
 }
 
-bool cursor::next() {
+bool cursor::next() noexcept {
     if (!istrm_.good()) {
         DVLOG(log_trace) << "file stream of the cursor is not good";
         return false;
@@ -43,19 +47,19 @@ bool cursor::next() {
     return rv;
 }
 
-storage_id_type cursor::storage() {
+storage_id_type cursor::storage() const noexcept {
     return log_entry_->storage();
 }
 
-void cursor::key(std::string& buf) {
+void cursor::key(std::string& buf) const noexcept {
     log_entry_->key(buf);
 }
 
-void cursor::value(std::string& buf) {
+void cursor::value(std::string& buf) const noexcept {
     log_entry_->value(buf);
 }
 
-std::vector<large_object_view>& cursor::large_objects() {
+std::vector<large_object_view>& cursor::large_objects() noexcept {
     return large_objects_;
 }
 

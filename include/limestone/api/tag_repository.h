@@ -24,21 +24,55 @@
 
 namespace limestone::api {
 
+class datastore;
+
+/**
+ * @brief a repository of epoch tags
+ */
 class tag_repository {
 public:
+    /**
+     * @brief returns a list of registered epoch tags
+     * @attention this function is thread-safe.
+     * @return a list of registered epoch tags
+     */
+    std::vector<epoch_tag>& list() noexcept;
 
-    std::vector<epoch_tag>& list();
+    /**
+     * @brief register the current epoch as epoch tag
+     * @param name the name the string to identify the tag
+     * @param comment a comment describing the tag
+     * @attention this function is not thread-safe.
+     * @note multiple epoch tags with the same name cannot be registered
+     */
+    void register_tag(std::string& name, std::string& comments) noexcept;
 
-    void register_tag(std::string name, std::string comments);
+    /**
+     * @brief return an epoch tag with the specified name
+     * @param name the name of the epoch tag to be searched
+     * @attention this function is not thread-safe.
+     * @return the epoch_tag specified by name. If no such tag exists, std::nullopt is returned.
+     * @attention this function is not thread-safe.
+     */
+    std::optional<epoch_tag> find(std::string_view name) const noexcept;
 
-    std::optional<epoch_tag> find(std::string_view name);
 
-    void unregister_tag(std::string_view name);
+    /**
+     * @brief remove epoch tag with specified name
+     * @param name the name the string to identify the tag to be removed
+     * @attention this function is not thread-safe.
+     * @note if no such tag exists, do nothing
+     */
+    void unregister_tag(std::string_view name) noexcept;
 
 private:
     std::unordered_map<std::string, epoch_tag> map_;
+
     std::vector<epoch_tag> list_;
 
+    tag_repository() noexcept;
+
+    friend class datastore;
 };
 
 } // namespace limestone::api

@@ -23,30 +23,58 @@
 
 namespace limestone::api {
 
+class tag_repository;
+
+/**
+ * @brief a tag associated with a specific epoch
+ */
 class epoch_tag {
 public:
+    /**
+     * @brief returns the name of the tag
+     * @attention this function is thread-safe.
+     * @return the tag name
+     */
+    std::string_view name() const noexcept { return name_; }
 
-    epoch_tag(std::string_view name, std::string_view comments, epoch_id_type epoch_id, std::chrono::system_clock::time_point timestamp)
-        : name_(std::string(name)), comments_(std::string(comments)), epoch_id_(epoch_id), timestamp_(timestamp) {
-    }
-    epoch_tag(std::string_view name, std::string_view comments) : epoch_tag(name, comments, 0, std::chrono::system_clock::now()) {
-    }
-    
-    std::string_view name() const { return name_; }
+    /**
+     * @brief returns the comment added to the tag
+     * @attention this function is thread-safe.
+     * @return the comment
+     */
+    std::string_view comments() const noexcept { return comments_; }
 
-    std::string_view comments() const { return comments_; }
+    /**
+     * @brief returns the epoch ID corresponding to the tag
+     * @attention this function is thread-safe.
+     * @return the epoch ID
+     */
+    epoch_id_type epoch_id() const noexcept { return epoch_id_; }
 
-    epoch_id_type epoch_id() const { return epoch_id_; }
-
-    std::chrono::system_clock::time_point timestamp() const { return timestamp_; }
+    /**
+     * @brief returns the time the tag was created
+     * @attention this function is thread-safe.
+     * @return the time the tag was created
+     */
+    std::chrono::system_clock::time_point timestamp() const noexcept { return timestamp_; }
 
 private:
+    const std::string name_;
 
-    const std::string name_{};
-    const std::string comments_{};
-    const epoch_id_type epoch_id_{};
-    const std::chrono::system_clock::time_point timestamp_{};
-    
+    const std::string comments_;
+
+    const epoch_id_type epoch_id_;
+
+    const std::chrono::system_clock::time_point timestamp_;
+
+    epoch_tag(std::string_view name, std::string_view comments, epoch_id_type epoch_id, std::chrono::system_clock::time_point timestamp) noexcept
+        : name_(std::string(name)), comments_(std::string(comments)), epoch_id_(epoch_id), timestamp_(timestamp) {
+    }
+
+    epoch_tag(std::string_view name, std::string_view comments) noexcept : epoch_tag(name, comments, 0, std::chrono::system_clock::now()) {
+    }
+
+    friend class tag_repository;
 };
     
 } // namespace limestone::api

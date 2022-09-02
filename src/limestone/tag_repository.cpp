@@ -18,7 +18,9 @@
 
 namespace limestone::api {
 
-std::vector<epoch_tag>& tag_repository::list() {
+tag_repository::tag_repository() noexcept = default;
+
+std::vector<epoch_tag>& tag_repository::list() noexcept {
     list_.clear();
     for(auto&& e : map_) {
         list_.emplace_back(e.second);
@@ -26,18 +28,18 @@ std::vector<epoch_tag>& tag_repository::list() {
     return list_;
 }
 
-void tag_repository::register_tag(std::string name, std::string comments) {
+void tag_repository::register_tag(std::string& name, std::string& comments) noexcept {
     map_.emplace(name, epoch_tag(name, comments));
 }
 
-std::optional<epoch_tag> tag_repository::find(std::string_view name) {
+std::optional<epoch_tag> tag_repository::find(std::string_view name) const noexcept {
     if (auto itr = map_.find(std::string(name)); itr != map_.cend()) {
         return itr->second;
     }
     return std::nullopt;
 }
 
-void tag_repository::unregister_tag(std::string_view name) {
+void tag_repository::unregister_tag(std::string_view name) noexcept {
     if (auto itr = map_.find(std::string(name)); itr != map_.cend()) {
         map_.erase(itr);
     }
