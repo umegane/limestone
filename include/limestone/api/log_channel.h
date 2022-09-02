@@ -149,7 +149,7 @@ private:
 
     std::atomic_uint64_t finished_epoch_id_{0};
 
-    log_channel(const boost::filesystem::path& location, std::size_t id, datastore& envelope) noexcept;
+    log_channel(boost::filesystem::path location, std::size_t id, datastore& envelope) noexcept;
 
     friend class datastore;
 };

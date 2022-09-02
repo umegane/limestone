@@ -38,14 +38,14 @@ public:
      * @param data_locations the list of data locations
      * @param metadata_location the location of the metadata
      */
-    configuration(const std::vector<boost::filesystem::path>& data_locations, const boost::filesystem::path& metadata_location) noexcept;
+    configuration(const std::vector<boost::filesystem::path>& data_locations, boost::filesystem::path metadata_location) noexcept;
 
     /**
      * @brief create a object
      * @param data_locations the list of data locations
      * @param metadata_location the location of the metadata
      */
-    configuration(const std::vector<boost::filesystem::path>&& data_locations, const boost::filesystem::path& metadata_location) noexcept;
+    configuration(const std::vector<boost::filesystem::path>&& data_locations, boost::filesystem::path metadata_location) noexcept;
 
 private:
     std::vector<boost::filesystem::path> data_locations_{};

@@ -26,7 +26,7 @@
 
 namespace limestone::api {
 
-log_channel::log_channel(const boost::filesystem::path& location, std::size_t id, datastore& envelope) noexcept
+log_channel::log_channel(boost::filesystem::path location, std::size_t id, datastore& envelope) noexcept
     : envelope_(envelope), location_(std::move(location)), id_(id)
 {
     std::stringstream ss;

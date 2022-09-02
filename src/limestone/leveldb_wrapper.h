@@ -58,7 +58,7 @@ public:
     leveldb_wrapper(leveldb_wrapper&& other) noexcept = delete;
     leveldb_wrapper& operator=(leveldb_wrapper&& other) noexcept = delete;
 
-    leveldb::DB* db() const noexcept {
+    [[nodiscard]] leveldb::DB* db() const noexcept {
         return lvldb_;
     }
     

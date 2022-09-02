@@ -37,7 +37,7 @@ public:
     /**
      * @brief destruct the object
      */
-    ~cursor();
+    ~cursor() noexcept;
 
     /**
      * @brief change the current cursor to point to the next entry
