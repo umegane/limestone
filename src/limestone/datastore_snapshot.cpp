@@ -26,12 +26,18 @@
 namespace limestone::api {
 
 static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) noexcept {
+    epoch_id_type rv{};
+
     boost::filesystem::ifstream istrm;
     log_entry e;
     istrm.open(file, std::ios_base::in | std::ios_base::binary);
-    while (e.read(istrm));
+    while (e.read(istrm)) {
+        if (e.epoch_id() > rv) {
+            rv = e.epoch_id();
+        }
+    }
     istrm.close();
-    return e.epoch_id();
+    return rv;
 }
 
 void datastore::create_snapshot() noexcept {
@@ -40,7 +46,6 @@ void datastore::create_snapshot() noexcept {
 
     epoch_id_type ld_epoch = last_durable_epoch(from_dir / boost::filesystem::path(std::string(epoch_file_name)));
     epoch_id_switched_.store(ld_epoch + 1);
-    epoch_id_informed_.store(ld_epoch + 1);
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {

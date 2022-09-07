@@ -229,11 +229,13 @@ private:
 
     std::mutex mtx_files_{};
 
+    std::mutex mtx_epoch_file_{};
+
     state state_{};
 
     void add_file(const boost::filesystem::path& file) noexcept;
 
-    bool update_min_epoch_id() noexcept;
+    bool update_min_epoch_id(bool update_finished = true) noexcept;
     
     void check_after_ready(std::string_view func) const noexcept;
 

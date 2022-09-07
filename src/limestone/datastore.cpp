@@ -88,42 +88,52 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
 
     epoch_id_switched_.store(neid);
     if (epoch_id_informed_.load() < (neid - 1)) {
-        if (update_min_epoch_id()) {
-            boost::filesystem::ofstream strm{};
-            strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
-            log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
-            strm.close();
-        }
+        update_min_epoch_id(false);
     }
 }
 
-bool datastore::update_min_epoch_id() noexcept {
-    auto min_epoch = static_cast<epoch_id_type>(epoch_id_switched_.load());
+bool datastore::update_min_epoch_id(bool update_finished) noexcept {
+    auto upper_limit = epoch_id_switched_.load() - 1;
     std::uint64_t max_finished_epoch = 0;
 
     for (const auto& e : log_channels_) {
-        auto local_current_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
-        if (local_current_epoch < min_epoch) {
-            min_epoch = local_current_epoch;
+        auto working_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
+        if ((working_epoch - 1) < upper_limit) {
+            upper_limit = working_epoch - 1;
         }
-        auto local_finished_epoch = e->finished_epoch_id_.load();
-        if (max_finished_epoch < local_finished_epoch) {
-            max_finished_epoch = local_finished_epoch;
+        auto finished_epoch = e->finished_epoch_id_.load();
+        if (max_finished_epoch < finished_epoch) {
+            max_finished_epoch = finished_epoch;
         }
     }
-    std::uint64_t min_working_epoch = min_epoch - 1;
     std::uint64_t old_epoch_id = epoch_id_informed_.load();
-    bool rv{};
-    while (old_epoch_id < min_working_epoch) {
-        rv = (old_epoch_id < max_finished_epoch);
-        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, min_working_epoch)) {
-            if (persistent_callback_) {
-                persistent_callback_(min_working_epoch);
-            }
-            return rv;
-        }
+    std::uint64_t to_be_informed_epoch = old_epoch_id;
+    if (update_finished && (to_be_informed_epoch < max_finished_epoch)) {
+        to_be_informed_epoch = max_finished_epoch;
     }
-    return false;
+    if (to_be_informed_epoch < upper_limit) {
+        to_be_informed_epoch = upper_limit;
+    }
+
+    while (true) {
+        if (bool rv = (old_epoch_id < to_be_informed_epoch); rv) {
+            if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, to_be_informed_epoch)) {
+                if (persistent_callback_) {
+                    persistent_callback_(to_be_informed_epoch);
+                }
+                if (update_finished && rv) {
+                    std::lock_guard<std::mutex> lock(mtx_epoch_file_);
+
+                    boost::filesystem::ofstream strm{};
+                    strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+                    log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
+                    strm.close();
+                }
+                return rv;
+            }
+        }
+        return false;
+    }
 }
 
 void datastore::add_persistent_callback(std::function<void(epoch_id_type)> callback) noexcept {
