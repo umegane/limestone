@@ -39,6 +39,8 @@ void datastore::create_snapshot() noexcept {
     auto lvldb = std::make_unique<leveldb_wrapper>(from_dir);
 
     epoch_id_type ld_epoch = last_durable_epoch(from_dir / boost::filesystem::path(std::string(epoch_file_name)));
+    epoch_id_switched_.store(ld_epoch + 1);
+    epoch_id_informed_.store(ld_epoch + 1);
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
