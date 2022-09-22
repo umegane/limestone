@@ -211,6 +211,8 @@ private:
 
     std::atomic_uint64_t epoch_id_informed_{};
 
+    std::atomic_uint64_t epoch_id_recorded_{};
+
     std::unique_ptr<backup> backup_{};
 
     std::function<void(epoch_id_type)> persistent_callback_;
@@ -237,7 +239,7 @@ private:
 
     epoch_id_type search_max_durable_epock_id() noexcept;
 
-    void update_min_epoch_id(std::uint64_t prev_epoch_id) noexcept;
+    void update_min_epoch_id(bool from_switch_epoch = false) noexcept;
     
     void check_after_ready(std::string_view func) const noexcept;
 
