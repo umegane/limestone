@@ -53,7 +53,7 @@ void log_channel::end_session() noexcept {
     strm_.flush();
     finished_epoch_id_.store(current_epoch_id_.load());
     current_epoch_id_.store(UINT64_MAX);
-    envelope_.update_min_epoch_id();
+    envelope_.update_min_epoch_id(finished_epoch_id_.load() - 1);
     strm_.close();
 }
 

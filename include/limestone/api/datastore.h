@@ -235,7 +235,9 @@ private:
 
     void add_file(const boost::filesystem::path& file) noexcept;
 
-    bool update_min_epoch_id(bool update_finished = true) noexcept;
+    epoch_id_type search_max_durable_epock_id() noexcept;
+
+    void update_min_epoch_id(std::uint64_t prev_epoch_id) noexcept;
     
     void check_after_ready(std::string_view func) const noexcept;
 
