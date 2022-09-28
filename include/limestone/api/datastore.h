@@ -66,7 +66,7 @@ public:
      * @brief create an object with the given configuration
      * @param conf a reference to a configuration object used in the object construction
      */
-    explicit datastore(configuration const& conf) noexcept;
+    explicit datastore(configuration const& conf);
 
     /**
      * @brief destruct the object

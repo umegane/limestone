@@ -15,6 +15,7 @@
  */
 #include <thread>
 #include <chrono>
+#include <stdexcept>
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/foreach.hpp>
@@ -29,7 +30,7 @@ namespace limestone::api {
 
 datastore::datastore() noexcept = default;
 
-datastore::datastore(configuration const& conf) noexcept {
+datastore::datastore(configuration const& conf) {
     location_ = conf.data_locations_.at(0);
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
@@ -37,10 +38,18 @@ datastore::datastore(configuration const& conf) noexcept {
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
             LOG(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
-            std::abort();
+            throw std::runtime_error("fail to create the log_location directory");  //NOLINT
         }
     }
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
+
+    boost::filesystem::ofstream strm{};
+    strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+    if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
+        throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
+    }
+    strm.close();
+
     add_file(epoch_file_path_);
     DVLOG(log_debug) << "datastore is created, location = " << location_.string();
 }
