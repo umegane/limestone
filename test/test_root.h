@@ -28,7 +28,10 @@ class datastore_test : public datastore {
 public:
     explicit datastore_test(configuration& conf) : datastore(conf) {}
     datastore_test() : datastore() {}
-    auto& log_channels() { return log_channels_; }
+    auto& log_channels() const noexcept { return log_channels_for_tests(); }
+    auto epoch_id_informed() const noexcept { return epoch_id_informed_for_tests(); }
+    auto epoch_id_recorded() const noexcept { return epoch_id_recorded_for_tests(); }
+    auto& files() const noexcept { return files_for_tests(); }
 };
 
 } // namespace limestone::api

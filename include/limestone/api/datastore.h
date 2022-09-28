@@ -201,10 +201,15 @@ public:
      */
     void recover(const epoch_tag&) const noexcept;
 
-protected:
-    std::vector<std::unique_ptr<log_channel>> log_channels_;  //  NOLINT (place in protectes region for tests)
+protected:  // for tests
+    auto& log_channels_for_tests() const noexcept { return log_channels_; }
+    auto epoch_id_informed_for_tests() const noexcept { return epoch_id_informed_.load(); }
+    auto epoch_id_recorded_for_tests() const noexcept { return epoch_id_recorded_.load(); }
+    auto& files_for_tests() const noexcept { return files_; }
     
 private:
+    std::vector<std::unique_ptr<log_channel>> log_channels_;
+
     boost::filesystem::path location_{};
 
     std::atomic_uint64_t epoch_id_switched_{};
