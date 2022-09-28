@@ -87,14 +87,12 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
     }
 
     epoch_id_switched_.store(neid);
-    if (epoch_id_informed_.load() < (neid - 1)) {
-        update_min_epoch_id(false);
-    }
+    update_min_epoch_id(true);
 }
 
-bool datastore::update_min_epoch_id(bool update_finished) noexcept {
+void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {
     auto upper_limit = epoch_id_switched_.load() - 1;
-    std::uint64_t max_finished_epoch = 0;
+    epoch_id_type max_finished_epoch = 0;
 
     for (const auto& e : log_channels_) {
         auto working_epoch = static_cast<epoch_id_type>(e->current_epoch_id_.load());
@@ -106,33 +104,38 @@ bool datastore::update_min_epoch_id(bool update_finished) noexcept {
             max_finished_epoch = finished_epoch;
         }
     }
-    std::uint64_t old_epoch_id = epoch_id_informed_.load();
-    std::uint64_t to_be_informed_epoch = old_epoch_id;
-    if (update_finished && (to_be_informed_epoch < max_finished_epoch)) {
-        to_be_informed_epoch = max_finished_epoch;
-    }
-    if (to_be_informed_epoch < upper_limit) {
-        to_be_informed_epoch = upper_limit;
-    }
 
+    auto to_be_epoch = upper_limit;
+    auto old_epoch_id = epoch_id_informed_.load();
     while (true) {
-        if (bool rv = (old_epoch_id < to_be_informed_epoch); rv) {
-            if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, to_be_informed_epoch)) {
-                if (persistent_callback_) {
-                    persistent_callback_(to_be_informed_epoch);
-                }
-                if (update_finished && rv) {
-                    std::lock_guard<std::mutex> lock(mtx_epoch_file_);
-
-                    boost::filesystem::ofstream strm{};
-                    strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
-                    log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
-                    strm.close();
-                }
-                return rv;
-            }
+        if (old_epoch_id >= to_be_epoch) {
+            break;
         }
-        return false;
+        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
+            if (persistent_callback_) {
+                persistent_callback_(to_be_epoch);
+            }
+            break;
+        }
+    }
+
+    if (from_switch_epoch && (to_be_epoch > static_cast<std::uint64_t>(max_finished_epoch))) {
+        to_be_epoch = static_cast<std::uint64_t>(max_finished_epoch);
+    }
+    old_epoch_id = epoch_id_recorded_.load();
+    while (true) {
+        if (old_epoch_id >= to_be_epoch) {
+            break;
+        }
+        if (epoch_id_recorded_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
+            std::lock_guard<std::mutex> lock(mtx_epoch_file_);
+
+            boost::filesystem::ofstream strm{};
+            strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+            log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
+            strm.close();
+            break;
+        }
     }
 }
 

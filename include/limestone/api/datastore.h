@@ -201,15 +201,22 @@ public:
      */
     void recover(const epoch_tag&) const noexcept;
 
-protected:
-    std::vector<std::unique_ptr<log_channel>> log_channels_;  //  NOLINT (place in protectes region for tests)
+protected:  // for tests
+    auto& log_channels_for_tests() const noexcept { return log_channels_; }
+    auto epoch_id_informed_for_tests() const noexcept { return epoch_id_informed_.load(); }
+    auto epoch_id_recorded_for_tests() const noexcept { return epoch_id_recorded_.load(); }
+    auto& files_for_tests() const noexcept { return files_; }
     
 private:
+    std::vector<std::unique_ptr<log_channel>> log_channels_;
+
     boost::filesystem::path location_{};
 
     std::atomic_uint64_t epoch_id_switched_{};
 
     std::atomic_uint64_t epoch_id_informed_{};
+
+    std::atomic_uint64_t epoch_id_recorded_{};
 
     std::unique_ptr<backup> backup_{};
 
@@ -235,7 +242,9 @@ private:
 
     void add_file(const boost::filesystem::path& file) noexcept;
 
-    bool update_min_epoch_id(bool update_finished = true) noexcept;
+    epoch_id_type search_max_durable_epock_id() noexcept;
+
+    void update_min_epoch_id(bool from_switch_epoch = false) noexcept;
     
     void check_after_ready(std::string_view func) const noexcept;
 
