@@ -46,6 +46,7 @@ datastore::datastore(configuration const& conf) {
     boost::filesystem::ofstream strm{};
     strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
     if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
+        LOG(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
         throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
     }
     strm.close();
