@@ -72,8 +72,8 @@ void datastore::create_snapshot() noexcept {
 
                         leveldb::ReadOptions read_options;
                         if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
-                            if ((log_entry::write_version_epoch_number(value) < write_version.epoch_number_) ||
-                                ((log_entry::write_version_epoch_number(value) == write_version.epoch_number_) && (log_entry::write_version_minor_write_version(value) == write_version.minor_write_version_))) {
+                            if ((log_entry::write_version_epoch_number(value) > write_version.epoch_number_) ||
+                                ((log_entry::write_version_epoch_number(value) == write_version.epoch_number_) && (log_entry::write_version_minor_write_version(value) > write_version.minor_write_version_))) {
                                 need_write = false;
                             }
                         }
