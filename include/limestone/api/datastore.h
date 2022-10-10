@@ -257,6 +257,14 @@ private:
      * @attention this function is not thread-safe.
      */
     void create_snapshot() noexcept;
+
+    /**
+     * @brief compare two versions
+     * @details compare two versions ver_a and ver_b, then return zero if equal, or negative value if ver_a is less than ver_b, otherwise positive value.
+     * @param ver_a a version of write_version_type
+     * @param ver_b a version of std::string
+     */
+    inline int compare_version(const write_version_type ver_a, const std::string& version_string_b) noexcept;
 };
 
 } // namespace limestone::api
