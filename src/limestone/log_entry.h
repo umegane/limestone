@@ -81,10 +81,12 @@ public:
         entry_type type = entry_type::normal_entry;
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
-        std::int32_t key_len = key.length();
+        std::size_t key_len = key.length();
+        assert(key_len <= UINT32_MAX);
         write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
-        std::int32_t value_len = value.length();
+        std::size_t value_len = value.length();
+        assert(value_len <= UINT32_MAX);
         write_uint32(strm, static_cast<std::uint32_t>(value_len));
 
         write_uint64(strm, static_cast<std::uint64_t>(storage_id));
@@ -99,10 +101,12 @@ public:
         entry_type type = entry_type::normal_entry;
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
-        std::int32_t key_len = key_sid.length() - sizeof(storage_id_type);
+        std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
+        assert(key_len <= UINT32_MAX);
         write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
-        std::int32_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
+        std::size_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
+        assert(value_len <= UINT32_MAX);
         write_uint32(strm, static_cast<std::uint32_t>(value_len));
 
         strm.write(key_sid.data(), key_sid.length());
@@ -120,8 +124,8 @@ public:
         switch(entry_type_) {
         case entry_type::normal_entry:
         {
-            std::int32_t key_len = read_uint32(strm);
-            std::int32_t value_len = read_uint32(strm);
+            std::size_t key_len = read_uint32(strm);
+            std::size_t value_len = read_uint32(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
             strm.read(key_sid_.data(), key_sid_.length());
