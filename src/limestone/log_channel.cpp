@@ -73,8 +73,8 @@ void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe
 };
 
 void log_channel::remove_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] write_version_type write_version) noexcept {
-    LOG(ERROR) << "not implemented";
-    std::abort();  // FIXME
+    log_entry::write_remove(strm_, storage_id, key, write_version);
+    write_version_ = write_version;
 }
 
 void log_channel::add_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {

@@ -78,7 +78,7 @@ void datastore::create_snapshot() noexcept {
                 }
                 case log_entry::entry_type::normal_entry:
                 {
-                    if(current_epoch <= ld_epoch) {
+                    if (current_epoch <= ld_epoch) {
                         bool need_write = true;
                         std::string value;
                         write_version_type write_version;
@@ -94,6 +94,27 @@ void datastore::create_snapshot() noexcept {
                         if (need_write) {
                             leveldb::WriteOptions write_options;
                             lvldb->db()->Put(write_options, e.key_sid(), e.value_etc());
+                        }
+                    }
+                    break;
+                }
+                case log_entry::entry_type::remove_entry:
+                {
+                    if (current_epoch <= ld_epoch) {
+                        bool need_write = true;
+                        std::string value;
+                        write_version_type write_version;
+                        e.write_version(write_version);
+
+                        // skip older entry than already inserted
+                        leveldb::ReadOptions read_options;
+                        if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
+                            if (compare_version(write_version, value) < 0) {
+                                need_write = false;
+                            }
+                        }
+                        if (need_write) {
+                            // TODO: implement this
                         }
                     }
                     break;
