@@ -85,4 +85,35 @@ TEST_F(log_channel_test, number_and_backup) {
     EXPECT_EQ(files.at(4).string(), std::string(location) + "/pwal_0003");
 }
 
+TEST_F(log_channel_test, remove) {
+    limestone::api::log_channel& channel = datastore_->create_channel(boost::filesystem::path(location));
+
+    channel.begin_session();
+    channel.add_entry(42, "k1", "v1", {100, 4});
+    channel.add_entry(42, "k2", "v2", {100, 4});
+    channel.add_entry(42, "k3", "v3", {100, 4});
+    channel.end_session();
+
+    channel.begin_session();
+    channel.remove_entry(42, "k2", {128, 0});
+    channel.end_session();
+
+    datastore_->ready();
+    auto ss = datastore_->get_snapshot();
+    auto cursor = ss->get_cursor();
+
+    // expect: datastore has {k1:v1, k3:v3}, not required to be sorted
+    std::map<std::string, std::string> m;
+    while (cursor->next()) {
+        std::string key;
+        std::string value;
+        cursor->key(key);
+        cursor->value(value);
+        m[key] = value;
+    }
+    EXPECT_EQ(m.size(), 2);
+    EXPECT_EQ(m["k1"], "v1");
+    EXPECT_EQ(m["k3"], "v3");
+}
+
 }  // namespace limestone::testing
