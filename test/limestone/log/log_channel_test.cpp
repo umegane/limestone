@@ -23,7 +23,7 @@ constexpr const char* location = "/tmp/log_channel_test";
 class log_channel_test : public ::testing::Test {
 public:
     virtual void SetUp() {
-        if (system("rm -rf /tmp//tmp/log_channel_test") != 0) {
+        if (system("rm -rf /tmp/log_channel_test") != 0) {
             std::cerr << "cannot remove directory" << std::endl;
         }
         if (system("mkdir -p /tmp/log_channel_test") != 0) {
@@ -40,7 +40,7 @@ public:
 
     virtual void TearDown() {
         datastore_ = nullptr;
-        if (system("rm -rf /tmp//tmp/log_channel_test") != 0) {
+        if (system("rm -rf /tmp/log_channel_test") != 0) {
             std::cerr << "cannot remove directory" << std::endl;
         }
     }
