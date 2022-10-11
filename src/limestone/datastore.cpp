@@ -91,7 +91,7 @@ log_channel& datastore::create_channel(const boost::filesystem::path& location) 
     std::lock_guard<std::mutex> lock(mtx_channel_);
     
     auto id = log_channel_id_.fetch_add(1);
-    log_channels_.emplace_back(std::unique_ptr<log_channel>(new log_channel(location, id, *this)));  // contrructor of log_channel is private
+    log_channels_.emplace_back(std::unique_ptr<log_channel>(new log_channel(location, id, *this)));  // constructor of log_channel is private
     return *log_channels_.at(id);
 }
 
