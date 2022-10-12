@@ -40,18 +40,27 @@ datastore::datastore(configuration const& conf) {
             LOG(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
             throw std::runtime_error("fail to create the log_location directory");  //NOLINT
         }
+    } else {
+        BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
+            if (!boost::filesystem::is_directory(p)) {
+                add_file(p);
+            }
+        }
     }
+
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
-
-    boost::filesystem::ofstream strm{};
-    strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
-    if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
-        LOG(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
-        throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
+    const bool result = boost::filesystem::exists(epoch_file_path_, error);
+    if (!result || error) {
+        boost::filesystem::ofstream strm{};
+        strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+        if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
+            LOG(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
+            throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
+        }
+        strm.close();
+        add_file(epoch_file_path_);
     }
-    strm.close();
-
-    add_file(epoch_file_path_);
+    
     DVLOG(log_debug) << "datastore is created, location = " << location_.string();
 }
 
