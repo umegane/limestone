@@ -264,7 +264,7 @@ private:
      * @param ver_a a version of write_version_type
      * @param ver_b a version of std::string
      */
-    inline int compare_version(const write_version_type ver_a, const std::string& version_string_b) noexcept;
+    inline int compare_version(write_version_type ver_a, const std::string& version_string_b) noexcept;
 };
 
 } // namespace limestone::api

@@ -43,15 +43,17 @@ static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) noe
 
 inline int datastore::compare_version(const write_version_type ver_a, const std::string& version_string_b) noexcept {
     epoch_id_type b_epoch = log_entry::write_version_epoch_number(version_string_b);
-    if (ver_a.epoch_number_ < b_epoch)
+    if (ver_a.epoch_number_ < b_epoch) {
         return -1;
-    if (ver_a.epoch_number_ > b_epoch)
+    } else if (ver_a.epoch_number_ > b_epoch) {
         return 1;
+    }
     uint64_t b_minor_write_version = log_entry::write_version_minor_write_version(version_string_b);
-    if (ver_a.minor_write_version_ < b_minor_write_version)
+    if (ver_a.minor_write_version_ < b_minor_write_version) {
         return -1;
-    if (ver_a.minor_write_version_ > b_minor_write_version)
+    } else if (ver_a.minor_write_version_ > b_minor_write_version) {
         return 1;
+    }
     return 0;
 }
 
