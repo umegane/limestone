@@ -41,24 +41,6 @@ static epoch_id_type last_durable_epoch(const boost::filesystem::path& file) noe
     return rv;
 }
 
-inline int datastore::compare_version(const write_version_type ver_a, const std::string& version_string_b) noexcept {
-    epoch_id_type b_epoch = log_entry::write_version_epoch_number(version_string_b);
-    if (ver_a.epoch_number_ < b_epoch) {
-        return -1;
-    }
-    if (ver_a.epoch_number_ > b_epoch) {
-        return 1;
-    }
-    uint64_t b_minor_write_version = log_entry::write_version_minor_write_version(version_string_b);
-    if (ver_a.minor_write_version_ < b_minor_write_version) {
-        return -1;
-    }
-    if (ver_a.minor_write_version_ > b_minor_write_version) {
-        return 1;
-    }
-    return 0;
-}
-
 void datastore::create_snapshot() noexcept {
     auto& from_dir = location_;
     auto lvldb = std::make_unique<leveldb_wrapper>(from_dir);
@@ -92,7 +74,7 @@ void datastore::create_snapshot() noexcept {
                         // skip older entry than already inserted
                         leveldb::ReadOptions read_options;
                         if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
-                            if (compare_version(write_version, value.substr(1)) < 0) {
+                            if (write_version < write_version_type(value.substr(1))) {
                                 need_write = false;
                             }
                         }
@@ -117,7 +99,7 @@ void datastore::create_snapshot() noexcept {
                         // skip older entry than already inserted
                         leveldb::ReadOptions read_options;
                         if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
-                            if (compare_version(write_version, value.substr(1)) < 0) {
+                            if (write_version < write_version_type(value.substr(1))) {
                                 need_write = false;
                             }
                         }
