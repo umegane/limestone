@@ -33,7 +33,7 @@ class write_version_type {
 public:
     write_version_type();
     write_version_type(epoch_id_type epoch_number, std::uint64_t minor_write_version);
-    write_version_type(std::string);
+    explicit write_version_type(const std::string& version_string);
     bool operator==(write_version_type value) const {
         return (this->epoch_number_ == value.epoch_number_) && (this->minor_write_version_ == value.minor_write_version_);
     }
