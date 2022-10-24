@@ -15,6 +15,7 @@
  */
 #include <boost/filesystem/operations.hpp>
 #include <boost/foreach.hpp>
+#include <cstdlib>
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
@@ -64,22 +65,50 @@ void datastore::create_snapshot() noexcept {
                 }
                 case log_entry::entry_type::normal_entry:
                 {
-                    if(current_epoch <= ld_epoch) {
+                    if (current_epoch <= ld_epoch) {
                         bool need_write = true;
                         std::string value;
                         write_version_type write_version;
                         e.write_version(write_version);
 
+                        // skip older entry than already inserted
                         leveldb::ReadOptions read_options;
                         if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
-                            if ((log_entry::write_version_epoch_number(value) > write_version.epoch_number_) ||
-                                ((log_entry::write_version_epoch_number(value) == write_version.epoch_number_) && (log_entry::write_version_minor_write_version(value) > write_version.minor_write_version_))) {
+                            if (write_version < write_version_type(value.substr(1))) {
                                 need_write = false;
                             }
                         }
                         if (need_write) {
+                            std::string db_value;
+                            db_value.append(1, static_cast<char>(e.type()));
+                            db_value.append(e.value_etc());
                             leveldb::WriteOptions write_options;
-                            lvldb->db()->Put(write_options, e.key_sid(), e.value_etc());
+                            lvldb->db()->Put(write_options, e.key_sid(), db_value);
+                        }
+                    }
+                    break;
+                }
+                case log_entry::entry_type::remove_entry:
+                {
+                    if (current_epoch <= ld_epoch) {
+                        bool need_write = true;
+                        std::string value;
+                        write_version_type write_version;
+                        e.write_version(write_version);
+
+                        // skip older entry than already inserted
+                        leveldb::ReadOptions read_options;
+                        if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
+                            if (write_version < write_version_type(value.substr(1))) {
+                                need_write = false;
+                            }
+                        }
+                        if (need_write) {
+                            std::string db_value;
+                            db_value.append(1, static_cast<char>(e.type()));
+                            db_value.append(e.value_etc());
+                            leveldb::WriteOptions write_options;
+                            lvldb->db()->Put(write_options, e.key_sid(), db_value);
                         }
                     }
                     break;
@@ -112,7 +141,20 @@ void datastore::create_snapshot() noexcept {
     }
     leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        log_entry::write(ostrm, it->key().ToString(), it->value().ToString());
+        leveldb::Slice db_value = it->value();
+        static_assert(sizeof(log_entry::entry_type) == 1);
+        auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
+        db_value.remove_prefix(1);
+        switch (entry_type) {
+        case log_entry::entry_type::normal_entry:
+            log_entry::write(ostrm, it->key().ToString(), db_value.ToString());
+            break;
+        case log_entry::entry_type::remove_entry:
+            break;  // skip
+        default:
+            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
+            std::abort();
+        }
     }
     ostrm.close();
     delete it;  // NOLINT (typical usage of leveldb)

@@ -37,6 +37,7 @@ public:
         marker_begin,
         marker_end,
         marker_durable,
+        remove_entry,
     };
     
     log_entry() = default;
@@ -63,6 +64,9 @@ public:
         case entry_type::normal_entry:
             write(strm, key_sid_, value_etc_);
             break;
+        case entry_type::remove_entry:
+            write_remove(strm, key_sid_, value_etc_);
+            break;
         case entry_type::marker_begin:
             begin_session(strm, epoch_id_);
             break;
@@ -81,10 +85,12 @@ public:
         entry_type type = entry_type::normal_entry;
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
-        std::int32_t key_len = key.length();
+        std::size_t key_len = key.length();
+        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
-        std::int32_t value_len = value.length();
+        std::size_t value_len = value.length();
+        assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         write_uint32(strm, static_cast<std::uint32_t>(value_len));
 
         write_uint64(strm, static_cast<std::uint64_t>(storage_id));
@@ -99,11 +105,40 @@ public:
         entry_type type = entry_type::normal_entry;
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
-        std::int32_t key_len = key_sid.length() - sizeof(storage_id_type);
+        std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
+        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
-        std::int32_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
+        std::size_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
+        assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         write_uint32(strm, static_cast<std::uint32_t>(value_len));
+
+        strm.write(key_sid.data(), key_sid.length());
+        strm.write(value_etc.data(), value_etc.length());
+    }
+
+    static void write_remove(boost::filesystem::ofstream& strm, storage_id_type storage_id, std::string_view key, write_version_type write_version) {
+        entry_type type = entry_type::remove_entry;
+        write_uint8(strm, static_cast<std::uint8_t>(type));
+
+        std::size_t key_len = key.length();
+        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        write_uint32(strm, static_cast<std::uint32_t>(key_len));
+
+        write_uint64(strm, static_cast<std::uint64_t>(storage_id));
+        strm.write(key.data(), key_len);
+
+        write_uint64(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
+        write_uint64(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
+    }
+
+    static void write_remove(boost::filesystem::ofstream& strm, std::string_view key_sid, std::string_view value_etc) {
+        entry_type type = entry_type::remove_entry;
+        write_uint8(strm, static_cast<std::uint8_t>(type));
+
+        std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
+        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
         strm.write(key_sid.data(), key_sid.length());
         strm.write(value_etc.data(), value_etc.length());
@@ -120,12 +155,22 @@ public:
         switch(entry_type_) {
         case entry_type::normal_entry:
         {
-            std::int32_t key_len = read_uint32(strm);
-            std::int32_t value_len = read_uint32(strm);
+            std::size_t key_len = read_uint32(strm);
+            std::size_t value_len = read_uint32(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
             strm.read(key_sid_.data(), key_sid_.length());
             value_etc_.resize(value_len + sizeof(epoch_id_type) + sizeof(std::uint64_t));
+            strm.read(value_etc_.data(), value_etc_.length());
+            break;
+        }
+        case entry_type::remove_entry:
+        {
+            std::size_t key_len = read_uint32(strm);
+
+            key_sid_.resize(key_len + sizeof(storage_id_type));
+            strm.read(key_sid_.data(), key_sid_.length());
+            value_etc_.resize(sizeof(epoch_id_type) + sizeof(std::uint64_t));
             strm.read(value_etc_.data(), value_etc_.length());
             break;
         }
