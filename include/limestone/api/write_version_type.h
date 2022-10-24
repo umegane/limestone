@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <string>
 #include <cstdint>
 
 #include <limestone/api/epoch_id_type.h>
@@ -32,8 +33,15 @@ class write_version_type {
 public:
     write_version_type();
     write_version_type(epoch_id_type epoch_number, std::uint64_t minor_write_version);
+    explicit write_version_type(const std::string& version_string);
     bool operator==(write_version_type value) const {
-        return (value.epoch_number_ == epoch_number_) && (value.minor_write_version_ == minor_write_version_);
+        return (this->epoch_number_ == value.epoch_number_) && (this->minor_write_version_ == value.minor_write_version_);
+    }
+    bool operator<(write_version_type value) const {
+        if (this->epoch_number_ == value.epoch_number_) {
+            return this->minor_write_version_ < value.minor_write_version_;
+        }
+        return this->epoch_number_ < value.epoch_number_;
     }
 
 private:
