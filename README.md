@@ -4,15 +4,6 @@
 
 * CMake `>= 3.10`
 * C++ Compiler `>= C++17`
-* access to installed dependent modules: 
-  * sharksfin
-  * takatori
-  * yugawara
-  * mizugaki
-  * shakujo (until dependency is removed)
-  * fpdecimal
-  * tsubakuro (for proto definition)
-  * performance-tools (optional)
 * and see *Dockerfile* section
 
 ```sh
@@ -23,9 +14,9 @@ git submodule update --init --recursive
 ### Dockerfile
 
 ```dockerfile
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
-RUN apt update -y && apt install -y git build-essential cmake ninja-build libboost-filesystem-dev libboost-system-dev libboost-container-dev libboost-thread-dev libboost-stacktrace-dev libgoogle-glog-dev libgflags-dev doxygen libicu-dev libleveldb-dev pkg-config
+RUN apt update -y && apt install -y git build-essential cmake ninja-build libboost-filesystem-dev libboost-system-dev libboost-container-dev libboost-thread-dev libboost-stacktrace-dev libgoogle-glog-dev libgflags-dev doxygen libleveldb-dev pkg-config
 ```
 
 optional packages:
@@ -33,7 +24,6 @@ optional packages:
 * `doxygen`
 * `graphviz`
 * `clang-tidy-8`
-* [`linenoise-ng`](https://github.com/arangodb/linenoise-ng.git)
 
 ## How to build
 
