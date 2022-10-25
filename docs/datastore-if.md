@@ -1,8 +1,8 @@
 # データストアモジュールのI/Fデザイン
 
-2022-03-28 arakawa (NT)
-2022-07-20 horikawa (NT) ライフサイクル（改版）、進捗確認（追加）
-2022-08-17 horikawa (NT) limestone API revisement. (Issue #9)の内容を追加
+2022-03-28 arakawa (NT)  
+2022-07-20 horikawa (NT) ライフサイクル（改版）、進捗確認（追加）  
+2022-08-17 horikawa (NT) limestone API revisement. (Issue #9)の内容を追加  
 
 ## この文書について
 
