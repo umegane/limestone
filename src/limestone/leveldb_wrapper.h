@@ -39,7 +39,7 @@ public:
         leveldb::Options options;
         options.create_if_missing = true;
         if (leveldb::Status status = leveldb::DB::Open(options, lvldb_path_.string(), &lvldb_); !status.ok()) {
-            LOG(ERROR) << "Unable to open/create LevelDB database, status = " << status.ToString();
+            LOG_LP(ERROR) << "Unable to open/create LevelDB database, status = " << status.ToString();
             std::abort();
         }
     }
@@ -71,7 +71,7 @@ private:
             if (boost::filesystem::is_directory(lvldb_path_)) {
                 boost::filesystem::remove_all(lvldb_path_);
             } else {
-                LOG(ERROR) << lvldb_path_.string() << " is not a directory";
+                LOG_LP(ERROR) << lvldb_path_.string() << " is not a directory";
                 std::abort();
             }
         }

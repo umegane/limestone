@@ -50,7 +50,7 @@ void datastore::create_snapshot() noexcept {
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            DVLOG(log_debug) << "processing pwal file: " << p.filename().string();
+            DVLOG_LP(log_debug) << "processing pwal file: " << p.filename().string();
             log_entry e;
             epoch_id_type current_epoch{UINT64_MAX};
 
@@ -127,7 +127,7 @@ void datastore::create_snapshot() noexcept {
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(sub_dir, error);
         if (!result_mkdir || error) {
-            LOG(ERROR) << "fail to create directory";
+            LOG_LP(ERROR) << "fail to create directory";
             std::abort();
         }
     }
@@ -136,7 +136,7 @@ void datastore::create_snapshot() noexcept {
     boost::filesystem::path snapshot_file = sub_dir / boost::filesystem::path(std::string(snapshot::file_name_));
     ostrm.open(snapshot_file, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
     if( ostrm.fail() ){
-        LOG(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
+        LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
         std::abort();
     }
     leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
@@ -152,7 +152,7 @@ void datastore::create_snapshot() noexcept {
         case log_entry::entry_type::remove_entry:
             break;  // skip
         default:
-            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
+            LOG_LP(ERROR) << "never reach " << static_cast<int>(entry_type);
             std::abort();
         }
     }

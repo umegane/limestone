@@ -25,7 +25,7 @@ namespace limestone::api {
 cursor::cursor(const boost::filesystem::path& file) noexcept : log_entry_(std::make_unique<log_entry>()) {
     istrm_.open(file, std::ios_base::in | std::ios_base::binary );
     if (!istrm_.good()) {
-        LOG(ERROR) << "file stream of the cursor is not good (" << file << ")";
+        LOG_LP(ERROR) << "file stream of the cursor is not good (" << file << ")";
         std::abort();
     }
 }
@@ -35,15 +35,15 @@ cursor::~cursor() noexcept {
 
 bool cursor::next() noexcept {
     if (!istrm_.good()) {
-        DVLOG(log_trace) << "file stream of the cursor is not good";
+        DVLOG_LP(log_trace) << "file stream of the cursor is not good";
         return false;
     }
     if (istrm_.eof()) {
-        DVLOG(log_trace) << "already detected eof of the cursor";
+        DVLOG_LP(log_trace) << "already detected eof of the cursor";
         return false;
     }
     auto rv = log_entry_->read(istrm_);
-    DVLOG(log_trace) << (rv ? "read an entry from the cursor" : "detect eof of the cursor");
+    DVLOG_LP(log_trace) << (rv ? "read an entry from the cursor" : "detect eof of the cursor");
     return rv;
 }
 

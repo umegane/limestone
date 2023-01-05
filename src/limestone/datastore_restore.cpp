@@ -25,14 +25,14 @@
 namespace limestone::api {
 
 status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
-    DVLOG(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << (keep_backup ? "true" : "false");
+    DVLOG_LP(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << (keep_backup ? "true" : "false");
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
         if(!boost::filesystem::is_directory(p)) {
             try {
                 boost::filesystem::remove(p);
             } catch (boost::filesystem::filesystem_error& ex) {
-                LOG(ERROR) << ex.what() << " file = " << p.string();
+                LOG_LP(ERROR) << ex.what() << " file = " << p.string();
                 return status::err_permission_error;
             }
         }
@@ -44,7 +44,7 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
             boost::filesystem::copy_file(p, location_ / p.filename());
         }
         catch (boost::filesystem::filesystem_error& ex) {
-            LOG(ERROR) << ex.what() << " file = " << p.string();
+            LOG_LP(ERROR) << ex.what() << " file = " << p.string();
             return status::err_permission_error;
         }
     }
@@ -54,7 +54,7 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
                 boost::filesystem::remove(p);
             }
             catch (boost::filesystem::filesystem_error& ex) {
-                LOG(WARNING) << ex.what() << " file = " << p.string();
+                LOG_LP(WARNING) << ex.what() << " file = " << p.string();
             }
         }
     }
