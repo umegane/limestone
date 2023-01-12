@@ -18,6 +18,7 @@
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
+#include "logging_helper.h"
 
 #include <limestone/api/log_channel.h>
 

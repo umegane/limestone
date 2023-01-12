@@ -1,12 +1,13 @@
 
 #include <sstream>
 #include <limestone/logging.h>
+#include "logging_helper.h"
 
 #include "test_root.h"
 
 namespace limestone::testing {
 
-class logging_test : public ::testing::Test {
+class logging_helper_test : public ::testing::Test {
 public:
     void SetUp() {
     }
@@ -16,7 +17,7 @@ public:
 
 };
 
-TEST_F(logging_test, find_fullname) { // NOLINT
+TEST_F(logging_helper_test, find_fullname) { // NOLINT
     // check constexpr-ness (if fail, then compile error)
     constexpr std::string_view a = find_fullname(__PRETTY_FUNCTION__, __FUNCTION__);
 
@@ -31,7 +32,7 @@ TEST_F(logging_test, find_fullname) { // NOLINT
     // ASSERT_EQ(find_fullname("auto main(int, char **)::(anonymous class)::operator()()", "operator()"), ???);
 }
 
-TEST_F(logging_test, location_prefix_sv) { // NOLINT
+TEST_F(logging_helper_test, location_prefix_sv) { // NOLINT
     // check constexpr-ness (if fail, then compile error)
     constexpr auto a = location_prefix<2>(std::string_view("a"));
 
@@ -39,7 +40,7 @@ TEST_F(logging_test, location_prefix_sv) { // NOLINT
     ASSERT_EQ(std::string(location_prefix<50>("limestone::api::datastore::recover").data()), "/:limestone:api:datastore:recover ");
 }
 
-TEST_F(logging_test, location_prefix_constchar) { // NOLINT
+TEST_F(logging_helper_test, location_prefix_constchar) { // NOLINT
     // check constexpr-ness (if fail, then compile error)
     constexpr auto a = location_prefix(__PRETTY_FUNCTION__, __FUNCTION__);
 
@@ -54,36 +55,36 @@ TEST_F(logging_test, location_prefix_constchar) { // NOLINT
 
 #define LOG(_ignored) lbuf
 
-class logging_test_foo1 {
+class logging_helper_test_foo1 {
 public:
     int foo(int& p) {
         std::ostringstream lbuf;
         lbuf.str("");
         LOG_LP(0) << "TEST";
-        assert(lbuf.str() == "/:limestone:testing:logging_test_foo1:foo TEST");
+        assert(lbuf.str() == "/:limestone:testing:logging_helper_test_foo1:foo TEST");
         return 0;
     }
 };
 template<class T, int n>
-class logging_test_foo2 {
+class logging_helper_test_foo2 {
 public:
     T foo(int& p, int &p2) {
         std::ostringstream lbuf;
-        // limestone::logging_test_foo2<T, n>::foo
+        // limestone::logging_helper_test_foo2<T, n>::foo
         lbuf.str("");
         LOG_LP(0) << "TEST";
-        assert(lbuf.str() == "/:limestone:testing:logging_test_foo2:foo TEST");
+        assert(lbuf.str() == "/:limestone:testing:logging_helper_test_foo2:foo TEST");
         auto lambda1 = [&lbuf](int u){
-            // g++-9:      limestone::testing::logging_test_foo2<T, n>::foo<long unsigned int, 99>::<lambda(int)>
-            // clang++-11: auto limestone::testing::logging_test_foo2<unsigned long, 99>::foo(int &, int &)::(anonymous class)::operator()(int)
+            // g++-9:      limestone::testing::logging_helper_test_foo2<T, n>::foo<long unsigned int, 99>::<lambda(int)>
+            // clang++-11: auto limestone::testing::logging_helper_test_foo2<unsigned long, 99>::foo(int &, int &)::(anonymous class)::operator()(int)
             lbuf.str("");
             LOG_LP(0) << "TEST";
             //assert(lbuf.str() == ???);
         };
         lambda1(1);
         std::function<long double(int)> lambda2 = [&lbuf](int u){
-            // g++-9:      limestone::testing::logging_test_foo2<T, n>::foo<long unsigned int, 99>::<lambda(int)>
-            // clang++-11: auto limestone::testing::logging_test_foo2<unsigned long, 99>::foo(int &, int &)::(anonymous class)::operator()(int)
+            // g++-9:      limestone::testing::logging_helper_test_foo2<T, n>::foo<long unsigned int, 99>::<lambda(int)>
+            // clang++-11: auto limestone::testing::logging_helper_test_foo2<unsigned long, 99>::foo(int &, int &)::(anonymous class)::operator()(int)
             lbuf.str("");
             LOG_LP(0) << "TEST";
             //assert(lbuf.str() == ???);
@@ -95,11 +96,11 @@ public:
     long double operator() (const char *p) {
         std::ostringstream lbuf;
         LOG_LP(0) << "TEST";
-        assert(lbuf.str() == "/:limestone:testing:logging_test_foo2:operator() TEST");
+        assert(lbuf.str() == "/:limestone:testing:logging_helper_test_foo2:operator() TEST");
         auto lambda1 = [&lbuf](int u){
             //std::cout << "PF:" << __PRETTY_FUNCTION__ << " F:" << __FUNCTION__ << std::endl;
-            // g++-9:      limestone::testing::logging_test_foo2<T, n>::operator()(const char*) [with T = long unsigned int; int n = 99]::<lambda(int)>
-            // clang++-11: auto limestone::testing::logging_test_foo2<unsigned long, 99>::operator()(const char *)::(anonymous class)::operator()(int) const [T = unsigned long, n = 99]
+            // g++-9:      limestone::testing::logging_helper_test_foo2<T, n>::operator()(const char*) [with T = long unsigned int; int n = 99]::<lambda(int)>
+            // clang++-11: auto limestone::testing::logging_helper_test_foo2<unsigned long, 99>::operator()(const char *)::(anonymous class)::operator()(int) const [T = unsigned long, n = 99]
             lbuf.str("");
             LOG_LP(0) << "TEST";
             //assert(lbuf.str() == ???);
@@ -109,11 +110,11 @@ public:
     }
 };
 
-TEST_F(logging_test, assert_in_other_methods) { // NOLINT
+TEST_F(logging_helper_test, assert_in_other_methods) { // NOLINT
     int dummy = 1234;
-    logging_test_foo1 foo1;
+    logging_helper_test_foo1 foo1;
     foo1.foo(dummy);
-    logging_test_foo2<unsigned long, 99> foo2;
+    logging_helper_test_foo2<unsigned long, 99> foo2;
     foo2.foo(dummy, dummy);
     foo2("a");
 }

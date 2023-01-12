@@ -22,6 +22,7 @@
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
+#include "logging_helper.h"
 
 #include <limestone/api/datastore.h>
 #include "log_entry.h"
