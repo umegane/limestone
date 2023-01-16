@@ -180,7 +180,7 @@
 
 ### データ投入
 
-![load](20220328-datastore-if/load.drawio.svg)
+![load](datastore-if/load.drawio.svg)
 
 * `class datastore`
   * `datastore::create_channel(path location) -> log_channel`
