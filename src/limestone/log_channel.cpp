@@ -18,6 +18,7 @@
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
+#include "logging_helper.h"
 
 #include <limestone/api/log_channel.h>
 
@@ -58,7 +59,7 @@ void log_channel::end_session() noexcept {
 }
 
 void log_channel::abort_session([[maybe_unused]] status status_code, [[maybe_unused]] const std::string& message) noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME
 }
 
@@ -68,7 +69,7 @@ void log_channel::add_entry(storage_id_type storage_id, std::string_view key, st
 }
 
 void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] std::string_view value, [[maybe_unused]] write_version_type write_version, [[maybe_unused]] const std::vector<large_object_input>& large_objects) noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME
 };
 
@@ -78,17 +79,17 @@ void log_channel::remove_entry(storage_id_type storage_id, std::string_view key,
 }
 
 void log_channel::add_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME
 }
 
 void log_channel::remove_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME
 }
 
 void log_channel::truncate_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME
 }
 

@@ -22,6 +22,7 @@
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
+#include "logging_helper.h"
 
 #include <limestone/api/datastore.h>
 #include "log_entry.h"
@@ -37,7 +38,7 @@ datastore::datastore(configuration const& conf) {
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
-            LOG(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
+            LOG_LP(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
             throw std::runtime_error("fail to create the log_location directory");  //NOLINT
         }
     } else {
@@ -54,14 +55,14 @@ datastore::datastore(configuration const& conf) {
         boost::filesystem::ofstream strm{};
         strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
         if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
-            LOG(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
+            LOG_LP(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
             throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
         }
         strm.close();
         add_file(epoch_file_path_);
     }
     
-    DVLOG(log_debug) << "datastore is created, location = " << location_.string();
+    DVLOG_LP(log_debug) << "datastore is created, location = " << location_.string();
 }
 
 datastore::~datastore() noexcept = default;
@@ -102,7 +103,7 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
 
     auto neid = static_cast<std::uint64_t>(new_epoch_id);
     if (neid <= epoch_id_switched_.load()) {
-        LOG(WARNING) << "switch to epoch_id_type of " << neid << " is curious";
+        LOG_LP(WARNING) << "switch to epoch_id_type of " << neid << " is curious";
     }
 
     epoch_id_switched_.store(neid);
@@ -198,13 +199,13 @@ void datastore::add_file(const boost::filesystem::path& file) noexcept {
 
 void datastore::check_after_ready(std::string_view func) const noexcept {
     if (state_ == state::not_ready) {
-        DVLOG(log_debug) << func << " called before ready()";
+        DVLOG_LP(log_debug) << func << " called before ready()";
     }
 }
 
 void datastore::check_before_ready(std::string_view func) const noexcept {
     if (state_ != state::not_ready) {
-        DVLOG(log_debug) << func << " called after ready()";
+        DVLOG_LP(log_debug) << func << " called after ready()";
     }
 }
 

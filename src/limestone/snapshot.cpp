@@ -17,6 +17,7 @@
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
+#include "logging_helper.h"
 
 #include <boost/filesystem.hpp>
 
@@ -30,12 +31,12 @@ std::unique_ptr<cursor> snapshot::get_cursor() const noexcept {
 }
 
 std::unique_ptr<cursor> snapshot::find([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key) const noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME should implement
 }
 
 std::unique_ptr<cursor> snapshot::scan([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view entry_key, [[maybe_unused]] bool inclusive) const noexcept {
-    LOG(ERROR) << "not implemented";
+    LOG_LP(ERROR) << "not implemented";
     std::abort();  // FIXME should implement
 }
 
