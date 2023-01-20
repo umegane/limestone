@@ -18,17 +18,19 @@
 #include <memory>
 #include <future>
 #include <atomic>
+#include <chrono>
 #include <vector>
 #include <set>
 #include <mutex>
-#include <atomic>
 
 #include <boost/filesystem/path.hpp>
 
 #include <limestone/status.h>
 #include <limestone/api/backup.h>
+#include <limestone/api/backup_detail.h>
 #include <limestone/api/log_channel.h>
 #include <limestone/api/configuration.h>
+#include <limestone/api/file_set_entry.h>
 #include <limestone/api/snapshot.h>
 #include <limestone/api/epoch_id_type.h>
 #include <limestone/api/write_version_type.h>
@@ -95,6 +97,9 @@ public:
      * @return status indicating whether the process ends successfully or not
      */
     status restore(std::string_view from, bool keep_backup) const noexcept;
+
+    // restore (prusik era)
+    status restore(std::string_view from, std::vector<file_set_entry>& entries);
 
     /**
      * @brief returns the status of the restore process that is currently in progress or that has finished immediately before
@@ -187,6 +192,14 @@ public:
      */
     backup& begin_backup() noexcept;
 
+    // backup (prusik era)
+    /**
+     * @brief start backup operation
+     * @detail a backup_detail object is created, which contains a list of log entry.
+     * @return a reference to the backup_detail object.
+     */
+    std::unique_ptr<backup_detail> begin_backup(backup_type btype);
+
     /**
      * @brief provide epoch tag repository
      * @return a reference to the epoch tag repository
@@ -230,6 +243,9 @@ private:
 
     std::atomic_uint64_t log_channel_id_{};
 
+    // used for backup
+    //   (old) full backup :   target is entire <files_>
+    //   (new/prusik) backup : target is rotated files, i.e. <files_> minus active log files
     std::set<boost::filesystem::path> files_{};
 
     std::mutex mtx_channel_{};
@@ -241,6 +257,9 @@ private:
     state state_{};
 
     void add_file(const boost::filesystem::path& file) noexcept;
+
+    // opposite of add_file
+    void subtract_file(const boost::filesystem::path& file);
 
     epoch_id_type search_max_durable_epock_id() noexcept;
 
@@ -257,6 +276,18 @@ private:
      * @attention this function is not thread-safe.
      */
     void create_snapshot() noexcept;
+
+    /**
+     * @brief requests the data store to rotate log files
+     */
+    epoch_id_type rotate_log_files();
+
+    /**
+     * @brief rotate epoch file
+     */
+    void rotate_epoch_file();
+
+    int64_t current_unix_epoch_in_millis();
 };
 
 } // namespace limestone::api
