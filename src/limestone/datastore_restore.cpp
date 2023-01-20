@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2022 tsurugi project.
+ * Copyright 2022-2023 tsurugi project.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,49 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
                 LOG_LP(WARNING) << ex.what() << " file = " << p.string();
             }
         }
+    }
+    return status::ok;
+}
+
+// prusik era
+status datastore::restore(std::string_view from, std::vector<file_set_entry>& entries) {
+    DVLOG_LP(log_debug) << "restore (from prusik) begin, from directory = " << from;
+
+    // purge logdir
+    // FIXME: copied from (old) restore(), fix duplicate
+    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
+        if(!boost::filesystem::is_directory(p)) {
+            try {
+                boost::filesystem::remove(p);
+            } catch (boost::filesystem::filesystem_error& ex) {
+                LOG_LP(ERROR) << ex.what() << " file = " << p.string();
+                return status::err_permission_error;
+            }
+        }
+    }
+
+    auto from_dir = boost::filesystem::path(std::string(from));
+    for (auto & ent : entries) {
+        boost::filesystem::path src{ent.source_path()};
+        boost::filesystem::path dst{ent.destination_path()};
+        if (src.is_absolute()) {
+            // use it
+        } else {
+            src = from_dir / src;
+        }
+        // TODO: location check (for security)
+        // TODO: assert dst.is_relative()
+        if (!boost::filesystem::exists(src) || !boost::filesystem::is_regular_file(src)) {
+            LOG_LP(ERROR) << "file not found : file = " << src.string();
+            return status::err_not_found;
+        }
+        try {
+            boost::filesystem::copy_file(src, location_ / dst);
+        } catch (boost::filesystem::filesystem_error& ex) {
+            LOG_LP(ERROR) << ex.what() << " file = " << src.string();
+            return status::err_permission_error;
+        }
+
     }
     return status::ok;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2022 tsurugi project.
+ * Copyright 2022-2023 tsurugi project.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 #include <thread>
 #include <chrono>
+#include <iomanip>
 #include <stdexcept>
 
 #include <boost/filesystem/operations.hpp>
@@ -49,6 +50,8 @@ datastore::datastore(configuration const& conf) {
         }
     }
 
+    // XXX: prusik era
+    // TODO: read rotated epoch files if main epoch file does not exist
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
     const bool result = boost::filesystem::exists(epoch_file_path_, error);
     if (!result || error) {
@@ -178,9 +181,63 @@ std::future<void> datastore::shutdown() noexcept {
     return std::async(std::launch::async, []{ std::this_thread::sleep_for(std::chrono::microseconds(100000)); });
 }
 
+// old interface
 backup& datastore::begin_backup() noexcept {
     backup_ = std::unique_ptr<backup>(new backup(files_));
     return *backup_;
+}
+
+std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {
+    rotate_log_files();
+
+    // LOG-0: all files are log file, so all files are selected in both standard/transaction mode.
+    (void) btype;
+
+    std::vector<backup_detail::entry> entries;
+    for (auto & ent : files_) {
+        // XXX: skip active files
+        // LOG-0: assume files are located flat in logdir.
+        auto filename = ent.filename().string();
+        auto dst = filename;
+        switch (filename[0]) {
+            case 'p': {
+                if (filename.find("wal", 1) == 1) {
+                    // "pwal"
+                    // pwal files are type:logfile, detached
+
+                    // skip active file
+                    if (filename.length() == 9) {  // FIXME: too adohoc check
+                        continue;
+                    }
+                    entries.emplace_back(ent.string(), dst, false, false);
+                } else {
+                    // unknown type
+                }
+                break;
+            }
+            case 'e': {
+                if (filename.find("poch", 1) == 1) {
+                    // "epoch"
+                    // epoch file(s) are type:logfile, the last rotated file is non-detached
+
+                    // skip active file
+                    if (filename.length() == 5) {  // FIXME: too adohoc check
+                        continue;
+                    }
+
+                    // TODO: only last epoch file is not-detached
+                    entries.emplace_back(ent.string(), dst, false, false);
+                } else {
+                    // unknown type
+                }
+                break;
+            }
+            default: {
+                // unknown type
+            }
+        }
+    }
+    return std::unique_ptr<backup_detail>(new backup_detail(entries, epoch_id_switched_.load()));
 }
 
 tag_repository& datastore::epoch_tag_repository() noexcept {
@@ -191,10 +248,57 @@ void datastore::recover([[maybe_unused]] const epoch_tag& tag) const noexcept {
     check_before_ready(static_cast<const char*>(__func__));
 }
 
+epoch_id_type datastore::rotate_log_files() {
+    // TODO:
+    //   for each logchannel lc:
+    //     if lc is in session, reserve do_rotate for end-of-session
+    //               otherwise, lc.do_rotate_file() immediately
+    //   rotate epoch file
+
+    // XXX: adhoc implementation:
+    //   for each logchannel lc:
+    //       lc.do_rotate_file()
+    //   rotate epoch file
+    for (const auto& lc : log_channels_) {
+        lc->do_rotate_file();
+    }
+    rotate_epoch_file();
+
+    return epoch_id_switched_.load();
+}
+
+void datastore::rotate_epoch_file() {
+    // XXX: multi-thread broken
+
+    std::stringstream ss;
+    ss << "epoch."
+       << std::setw(14) << std::setfill('0') << current_unix_epoch_in_millis()
+       << "." << epoch_id_switched_.load();
+    std::string new_name = ss.str();
+    boost::filesystem::path new_file = location_ / new_name;
+    boost::filesystem::rename(epoch_file_path_, new_file);
+    add_file(new_file);
+
+    // create new one
+    boost::filesystem::ofstream strm{};
+    strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
+        LOG_LP(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
+        throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
+    }
+    strm.close();
+}
+
 void datastore::add_file(const boost::filesystem::path& file) noexcept {
     std::lock_guard<std::mutex> lock(mtx_files_);
 
     files_.insert(file);
+}
+
+void datastore::subtract_file(const boost::filesystem::path& file) {
+    std::lock_guard<std::mutex> lock(mtx_files_);
+
+    files_.erase(file);
 }
 
 void datastore::check_after_ready(std::string_view func) const noexcept {
@@ -207,6 +311,10 @@ void datastore::check_before_ready(std::string_view func) const noexcept {
     if (state_ != state::not_ready) {
         DVLOG_LP(log_debug) << func << " called after ready()";
     }
+}
+
+int64_t datastore::current_unix_epoch_in_millis() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 } // namespace limestone::api

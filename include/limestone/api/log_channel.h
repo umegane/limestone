@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2022 tsurugi project.
+ * Copyright 2022-2023 tsurugi project.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,6 +150,10 @@ private:
     std::atomic_uint64_t finished_epoch_id_{0};
 
     log_channel(boost::filesystem::path location, std::size_t id, datastore& envelope) noexcept;
+
+    void request_rotate();
+
+    void do_rotate_file(epoch_id_type epoch = 0);
 
     friend class datastore;
 };

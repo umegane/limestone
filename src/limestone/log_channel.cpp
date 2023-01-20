@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2022 tsurugi project.
+ * Copyright 2022-2023 tsurugi project.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include <chrono>
 #include <sstream>
 #include <iomanip>
 
@@ -95,6 +97,24 @@ void log_channel::truncate_storage([[maybe_unused]] storage_id_type storage_id, 
 
 boost::filesystem::path log_channel::file_path() const noexcept {
     return location_ / file_;
+}
+
+// DO rotate without condition check.
+//  use this after your check
+void log_channel::do_rotate_file(epoch_id_type epoch) {
+    // XXX: multi-thread broken
+
+    std::stringstream ss;
+    ss << file_.string() << "."
+       << std::setw(14) << std::setfill('0') << envelope_.current_unix_epoch_in_millis()
+       << "." << epoch;
+    std::string new_name = ss.str();
+    boost::filesystem::path new_file = location_ / new_name;
+    boost::filesystem::rename(file_path(), new_file);
+    envelope_.add_file(new_file);
+
+    envelope_.subtract_file(location_ / file_);
+    registered_ = false;
 }
 
 } // namespace limestone::api
