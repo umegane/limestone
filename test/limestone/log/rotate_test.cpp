@@ -43,6 +43,7 @@ TEST_F(rotate_test, log_is_rotated) { // NOLINT
     using namespace limestone::api;
 
     log_channel& channel = datastore_->create_channel(boost::filesystem::path(location));
+    log_channel& unused_channel = datastore_->create_channel(boost::filesystem::path(location));
     datastore_->switch_epoch(42);
     channel.begin_session();
     channel.add_entry(42, "k1", "v1", {100, 4});
