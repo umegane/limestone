@@ -260,6 +260,9 @@ epoch_id_type datastore::rotate_log_files() {
     //       lc.do_rotate_file()
     //   rotate epoch file
     for (const auto& lc : log_channels_) {
+        if (!lc->registered_) {
+            continue;
+        }
         lc->do_rotate_file();
     }
     rotate_epoch_file();
