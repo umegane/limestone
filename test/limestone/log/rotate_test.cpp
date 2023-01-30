@@ -188,4 +188,36 @@ TEST_F(rotate_test, restore_prusik_all_rel) { // NOLINT
     EXPECT_EQ(files.size(), 3);
 }
 
+TEST_F(rotate_test, get_snapshot_works) { // NOLINT
+    using namespace limestone::api;
+
+    datastore_->ready();
+    log_channel& channel = datastore_->create_channel(boost::filesystem::path(location));
+    log_channel& unused_channel = datastore_->create_channel(boost::filesystem::path(location));
+    datastore_->switch_epoch(42);
+    channel.begin_session();
+    channel.add_entry(3, "k1", "v1", {100, 4});
+    channel.end_session();
+    datastore_->switch_epoch(43);
+
+    datastore_->begin_backup(backup_type::standard);  // rotate files
+
+    datastore_->shutdown();
+    regen_datastore();
+    // setup done
+
+    datastore_->recover();
+    datastore_->ready();
+    auto snapshot = datastore_->get_snapshot();
+    auto cursor = snapshot->get_cursor();
+    std::string buf;
+
+    ASSERT_TRUE(cursor->next());
+    EXPECT_EQ(cursor->storage(), 3);
+    EXPECT_EQ((cursor->key(buf), buf), "k1");
+    EXPECT_EQ((cursor->value(buf), buf), "v1");
+    EXPECT_FALSE(cursor->next());
+    datastore_->shutdown();
+}
+
 }  // namespace limestone::testing
