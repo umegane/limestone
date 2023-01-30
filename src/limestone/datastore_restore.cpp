@@ -67,7 +67,7 @@ status datastore::restore(std::string_view from, std::vector<file_set_entry>& en
     DVLOG_LP(log_debug) << "restore (from prusik) begin, from directory = " << from;
 
     // purge logdir
-    // FIXME: copied from (old) restore(), fix duplicate
+    // FIXME: copied this code from (old) restore(), fix duplicate
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
         if(!boost::filesystem::is_directory(p)) {
             try {
