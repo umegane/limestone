@@ -78,7 +78,7 @@ void datastore::create_snapshot() noexcept {
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            DVLOG_LP(log_debug) << "processing pwal file: " << p.filename().string();
+            VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
             log_entry e;
             epoch_id_type current_epoch{UINT64_MAX};
 
