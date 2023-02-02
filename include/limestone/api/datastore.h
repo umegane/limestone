@@ -277,6 +277,8 @@ private:
      */
     void create_snapshot() noexcept;
 
+    epoch_id_type last_durable_epoch_in_dir() noexcept;
+
     /**
      * @brief requests the data store to rotate log files
      */
