@@ -193,9 +193,18 @@ std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {
     // LOG-0: all files are log file, so all files are selected in both standard/transaction mode.
     (void) btype;
 
+    // calcuate files_ minus active-files
+    std::set<boost::filesystem::path> inactive_files(files_);
+    inactive_files.erase(epoch_file_path_);
+    for (const auto& lc : log_channels_) {
+        if (lc->registered_) {
+            inactive_files.erase(lc->file_path());
+        }
+    }
+
+    // build entries
     std::vector<backup_detail::entry> entries;
-    for (auto & ent : files_) {
-        // XXX: skip active files
+    for (auto & ent : inactive_files) {
         // LOG-0: assume files are located flat in logdir.
         auto filename = ent.filename().string();
         auto dst = filename;
@@ -205,8 +214,15 @@ std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {
                     // "pwal"
                     // pwal files are type:logfile, detached
 
-                    // skip active file
+                    // skip an "inactive" file with the name of active file,
+                    // it will cause some trouble if a file (that has the name of mutable files) is saved as immutable file.
+                    // but, by skip, backup files may be imcomplete.
                     if (filename.length() == 9) {  // FIXME: too adohoc check
+                        boost::system::error_code error;
+                        bool result = boost::filesystem::is_empty(ent, error);
+                        if (!error && !result) {
+                            LOG_LP(ERROR) << "skip the file with the name like active files: " << filename;
+                        }
                         continue;
                     }
                     entries.emplace_back(ent.string(), dst, false, false);
@@ -260,9 +276,22 @@ epoch_id_type datastore::rotate_log_files() {
     //       lc.do_rotate_file()
     //   rotate epoch file
     for (const auto& lc : log_channels_) {
+#if 0
+        // XXX: this condition may miss log-files made before this process and not rotated
         if (!lc->registered_) {
             continue;
         }
+#else
+        boost::system::error_code error;
+        bool result = boost::filesystem::exists(lc->file_path(), error);
+        if (!result || error) {
+            continue;  // skip if not exists
+        }
+        result = boost::filesystem::is_empty(lc->file_path(), error);
+        if (result || error) {
+            continue;  // skip if empty
+        }
+#endif
         lc->do_rotate_file();
     }
     rotate_epoch_file();

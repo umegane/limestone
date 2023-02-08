@@ -111,6 +111,79 @@ TEST_F(rotate_test, log_is_rotated) { // NOLINT
 
 }
 
+// implementation note:
+// in another design, rotate_all_file on shutdown or startup
+TEST_F(rotate_test, inactive_files_are_also_backed_up) { // NOLINT
+    using namespace limestone::api;
+    // scenario:
+    // a. server start
+    // b. write log with many channels
+    // c. server shutdown (or crash)
+    // d. server start
+    // e. write nothing or with fewer channels (than num of b.)
+    // f. rotate and backup
+    //    CHECK: are all files in the backup target??
+    // g. server shutdown
+    // h, restore files from 6.
+    //    DATA LOST if step f. is wrong
+
+    {
+        log_channel& channel1_0 = datastore_->create_channel(boost::filesystem::path(location));  // pwal_0000
+        log_channel& channel1_1 = datastore_->create_channel(boost::filesystem::path(location));  // pwal_0001
+        log_channel& unused_1_2 = datastore_->create_channel(boost::filesystem::path(location));  // pwal_0002 unused
+        datastore_->ready();
+        datastore_->switch_epoch(42);
+        channel1_0.begin_session();
+        channel1_0.add_entry(2, "k0", "v0", {42, 4});
+        channel1_0.end_session();
+        channel1_1.begin_session();
+        channel1_1.add_entry(2, "k1", "v1", {42, 4});
+        channel1_1.end_session();
+        datastore_->switch_epoch(43);
+    }
+    regen_datastore();
+    {
+        log_channel& channel2_0 = datastore_->create_channel(boost::filesystem::path(location));  // pwal_0000
+        log_channel& unused_2_1 = datastore_->create_channel(boost::filesystem::path(location));  // pwal_0001 unused
+        log_channel& unused_2_2 = datastore_->create_channel(boost::filesystem::path(location));  // pwal_0002 unused
+        datastore_->ready();
+        datastore_->switch_epoch(44);
+        channel2_0.begin_session();
+        channel2_0.add_entry(2, "k3", "v3", {44, 4});
+        channel2_0.end_session();
+        datastore_->switch_epoch(45);
+    }
+
+    // setup done
+
+    std::unique_ptr<backup_detail> bd = datastore_->begin_backup(backup_type::standard);
+    auto entries = bd->entries();
+
+    {  // result check
+        auto v(entries);
+        std::sort(v.begin(), v.end(), [](auto& a, auto& b){
+            return a.destination_path().string() < b.destination_path().string();
+        });
+        for (auto & e : v) {
+            //std::cout << e.source_path() << std::endl;  // print debug
+        }
+        EXPECT_EQ(v.size(), 3);
+        EXPECT_TRUE(starts_with(v[0].destination_path().string(), "epoch."));  // relative
+        EXPECT_TRUE(starts_with(v[0].source_path().string(), location));  // absolute
+        //EXPECT_EQ(v[0].is_detached(), false);
+        EXPECT_EQ(v[0].is_mutable(), false);
+        EXPECT_TRUE(starts_with(v[1].destination_path().string(), "pwal_0000."));  // relative
+        EXPECT_TRUE(starts_with(v[1].source_path().string(), location));  // absolute
+        EXPECT_EQ(v[1].is_detached(), false);
+        EXPECT_EQ(v[1].is_mutable(), false);
+        EXPECT_TRUE(starts_with(v[2].destination_path().string(), "pwal_0001."));  // relative
+        EXPECT_TRUE(starts_with(v[2].source_path().string(), location));  // absolute
+        EXPECT_EQ(v[2].is_detached(), false);
+        EXPECT_EQ(v[2].is_mutable(), false);
+    }
+
+}
+
 // why in this file??
 TEST_F(rotate_test, restore_prusik_all_abs) { // NOLINT
     using namespace limestone::api;
