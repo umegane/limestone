@@ -177,8 +177,12 @@ void datastore::add_snapshot_callback(std::function<void(write_version_type)> ca
 }
 
 std::future<void> datastore::shutdown() noexcept {
+    VLOG_LP(log_info) << "start";
     state_ = state::shutdown;
-    return std::async(std::launch::async, []{ std::this_thread::sleep_for(std::chrono::microseconds(100000)); });
+    return std::async(std::launch::async, []{
+        std::this_thread::sleep_for(std::chrono::microseconds(100000));
+        VLOG(log_info) << "/:limestone:datastore:shutdown end";
+    });
 }
 
 // old interface
