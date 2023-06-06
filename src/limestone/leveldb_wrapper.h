@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 // #include <boost/filesystem/operations.hpp>
-// #include <boost/foreach.hpp>
 #include <leveldb/db.h>
 
-// #include <glog/logging.h>
-// #include <limestone/logging.h>
+#include <glog/logging.h>
 
-// #include <limestone/api/datastore.h>
-// #include "log_entry.h"
+#include <limestone/logging.h>
 
 namespace limestone::api {
 
