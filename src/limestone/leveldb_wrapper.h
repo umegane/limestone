@@ -55,8 +55,26 @@ public:
     leveldb_wrapper(leveldb_wrapper&& other) noexcept = delete;
     leveldb_wrapper& operator=(leveldb_wrapper&& other) noexcept = delete;
 
-    [[nodiscard]] leveldb::DB* db() const noexcept {
-        return lvldb_;
+    bool put(const std::string& key, const std::string& value) {
+        leveldb::WriteOptions write_options{};
+        auto status = lvldb_->Put(write_options, key, value);
+        return status.ok();
+    }
+
+    bool get(const std::string& key, std::string* value) {
+        leveldb::ReadOptions read_options{};
+        auto status = lvldb_->Get(read_options, key, value);
+        return status.ok();
+    }
+
+    void each(const std::function<void(std::string_view, std::string_view)>& fun) {
+        leveldb::Iterator* it = lvldb_->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
+        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            leveldb::Slice key = it->key();
+            leveldb::Slice value = it->value();
+            fun(std::string_view(key.data(), key.size()), std::string_view(value.data(), value.size()));
+        }
+        delete it;  // NOLINT (typical usage of leveldb)
     }
     
 private:

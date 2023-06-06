@@ -100,8 +100,7 @@ void datastore::create_snapshot() noexcept {
                         e.write_version(write_version);
 
                         // skip older entry than already inserted
-                        leveldb::ReadOptions read_options;
-                        if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
+                        if (lvldb->get(e.key_sid(), &value)) {
                             if (write_version < write_version_type(value.substr(1))) {
                                 need_write = false;
                             }
@@ -110,8 +109,7 @@ void datastore::create_snapshot() noexcept {
                             std::string db_value;
                             db_value.append(1, static_cast<char>(e.type()));
                             db_value.append(e.value_etc());
-                            leveldb::WriteOptions write_options;
-                            lvldb->db()->Put(write_options, e.key_sid(), db_value);
+                            lvldb->put(e.key_sid(), db_value);
                         }
                     }
                     break;
@@ -125,8 +123,7 @@ void datastore::create_snapshot() noexcept {
                         e.write_version(write_version);
 
                         // skip older entry than already inserted
-                        leveldb::ReadOptions read_options;
-                        if (auto status = lvldb->db()->Get(read_options, e.key_sid(), &value); status.ok()) {
+                        if (lvldb->get(e.key_sid(), &value)) {
                             if (write_version < write_version_type(value.substr(1))) {
                                 need_write = false;
                             }
@@ -135,8 +132,7 @@ void datastore::create_snapshot() noexcept {
                             std::string db_value;
                             db_value.append(1, static_cast<char>(e.type()));
                             db_value.append(e.value_etc());
-                            leveldb::WriteOptions write_options;
-                            lvldb->db()->Put(write_options, e.key_sid(), db_value);
+                            lvldb->put(e.key_sid(), db_value);
                         }
                     }
                     break;
@@ -167,25 +163,22 @@ void datastore::create_snapshot() noexcept {
         LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
         std::abort();
     }
-    leveldb::Iterator* it = lvldb->db()->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
-    for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        leveldb::Slice db_value = it->value();
+    lvldb->each([&ostrm](std::string_view db_key, std::string_view db_value) {
         static_assert(sizeof(log_entry::entry_type) == 1);
         auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
         db_value.remove_prefix(1);
         switch (entry_type) {
         case log_entry::entry_type::normal_entry:
-            log_entry::write(ostrm, it->key().ToString(), db_value.ToString());
+            log_entry::write(ostrm, db_key, db_value);
             break;
         case log_entry::entry_type::remove_entry:
             break;  // skip
         default:
-            LOG_LP(ERROR) << "never reach " << static_cast<int>(entry_type);
+            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
             std::abort();
         }
-    }
+    });
     ostrm.close();
-    delete it;  // NOLINT (typical usage of leveldb)
 }
 
 } // namespace limestone::api
