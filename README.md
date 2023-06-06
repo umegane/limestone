@@ -16,7 +16,9 @@ git submodule update --init --recursive
 ```dockerfile
 FROM ubuntu:20.04
 
-RUN apt update -y && apt install -y git build-essential cmake ninja-build libboost-filesystem-dev libboost-system-dev libboost-container-dev libboost-thread-dev libboost-stacktrace-dev libgoogle-glog-dev libgflags-dev doxygen libleveldb-dev pkg-config
+RUN apt update -y && apt install -y git build-essential cmake ninja-build libboost-filesystem-dev libboost-system-dev libboost-container-dev libboost-thread-dev libboost-stacktrace-dev libgoogle-glog-dev libgflags-dev doxygen libleveldb-dev librocksdb-dev pkg-config
+# libleveldb-dev is not required if -DRECOVERY_SORTER_KVSLIB=ROCKSDB
+# librocksdb-dev is not required if -DRECOVERY_SORTER_KVSLIB=LEVELDB
 ```
 
 optional packages:
@@ -43,6 +45,7 @@ available options:
 * `-DBUILD_DOCUMENTS=OFF` - don't build documents by doxygen
 * `-DINSTALL_EXAMPLES=ON` - install example applications
 * `-DFORCE_INSTALL_RPATH=ON` - automatically configure `INSTALL_RPATH` for non-default library paths
+* `-DRECOVERY_SORTER_KVSLIB=<library>` - select the eKVS library using at recovery process. (`LEVELDB` or `ROCKSDB`, case-insensitive)
 * for debugging only
   * `-DENABLE_SANITIZER=OFF` - disable sanitizers (requires `-DCMAKE_BUILD_TYPE=Debug`)
   * `-DENABLE_UB_SANITIZER=ON` - enable undefined behavior sanitizer (requires `-DENABLE_SANITIZER=ON`)

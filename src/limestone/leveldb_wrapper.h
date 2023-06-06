@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 // #include <boost/filesystem/operations.hpp>
+
+#ifdef SORT_METHOD_USE_ROCKSDB
+#include <rocksdb/db.h>
+namespace leveldb = rocksdb;
+#else
 #include <leveldb/db.h>
+#endif
 
 #include <glog/logging.h>
 
@@ -24,6 +30,7 @@ namespace limestone::api {
 
 static constexpr const std::string_view leveldb_dir = "leveldb";
 
+// leveldb_wrapper : the wrapper for LevelDB or compatible one (e.g. RocksDB)
 class leveldb_wrapper {
 public:
     /**
