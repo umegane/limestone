@@ -92,42 +92,21 @@ void datastore::create_snapshot() noexcept {
                     break;
                 }
                 case log_entry::entry_type::normal_entry:
-                {
-                    if (current_epoch <= ld_epoch) {
-                        bool need_write = true;
-                        std::string value;
-                        write_version_type write_version;
-                        e.write_version(write_version);
-
-                        // skip older entry than already inserted
-                        if (lvldb->get(e.key_sid(), &value)) {
-                            if (write_version < write_version_type(value.substr(1))) {
-                                need_write = false;
-                            }
-                        }
-                        if (need_write) {
-                            std::string db_value;
-                            db_value.append(1, static_cast<char>(e.type()));
-                            db_value.append(e.value_etc());
-                            lvldb->put(e.key_sid(), db_value);
-                        }
-                    }
-                    break;
-                }
                 case log_entry::entry_type::remove_entry:
                 {
                     if (current_epoch <= ld_epoch) {
                         bool need_write = true;
-                        std::string value;
-                        write_version_type write_version;
-                        e.write_version(write_version);
 
                         // skip older entry than already inserted
+                        std::string value;
                         if (lvldb->get(e.key_sid(), &value)) {
+                            write_version_type write_version;
+                            e.write_version(write_version);
                             if (write_version < write_version_type(value.substr(1))) {
                                 need_write = false;
                             }
                         }
+
                         if (need_write) {
                             std::string db_value;
                             db_value.append(1, static_cast<char>(e.type()));
@@ -163,8 +142,8 @@ void datastore::create_snapshot() noexcept {
         LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
         std::abort();
     }
+    static_assert(sizeof(log_entry::entry_type) == 1);
     lvldb->each([&ostrm](std::string_view db_key, std::string_view db_value) {
-        static_assert(sizeof(log_entry::entry_type) == 1);
         auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
         db_value.remove_prefix(1);
         switch (entry_type) {
