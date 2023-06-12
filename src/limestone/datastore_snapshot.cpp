@@ -76,6 +76,27 @@ void datastore::create_snapshot() noexcept {
     epoch_id_type ld_epoch = last_durable_epoch_in_dir();
     epoch_id_switched_.store(ld_epoch + 1);
 
+    auto insert_entry_or_update_to_max = [&lvldb](log_entry& e){
+        bool need_write = true;
+
+        // skip older entry than already inserted
+        std::string value;
+        if (lvldb->get(e.key_sid(), &value)) {
+            write_version_type write_version;
+            e.write_version(write_version);
+            if (write_version < write_version_type(value.substr(1))) {
+                need_write = false;
+            }
+        }
+
+        if (need_write) {
+            std::string db_value;
+            db_value.append(1, static_cast<char>(e.type()));
+            db_value.append(e.value_etc());
+            lvldb->put(e.key_sid(), db_value);
+        }
+    };
+    auto add_entry = insert_entry_or_update_to_max;
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
             VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
@@ -95,24 +116,7 @@ void datastore::create_snapshot() noexcept {
                 case log_entry::entry_type::remove_entry:
                 {
                     if (current_epoch <= ld_epoch) {
-                        bool need_write = true;
-
-                        // skip older entry than already inserted
-                        std::string value;
-                        if (lvldb->get(e.key_sid(), &value)) {
-                            write_version_type write_version;
-                            e.write_version(write_version);
-                            if (write_version < write_version_type(value.substr(1))) {
-                                need_write = false;
-                            }
-                        }
-
-                        if (need_write) {
-                            std::string db_value;
-                            db_value.append(1, static_cast<char>(e.type()));
-                            db_value.append(e.value_etc());
-                            lvldb->put(e.key_sid(), db_value);
-                        }
+                        add_entry(e);
                     }
                     break;
                 }
