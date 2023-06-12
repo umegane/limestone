@@ -16,9 +16,9 @@
 
 #include <byteswap.h>
 #include <boost/filesystem/operations.hpp>
-#include <boost/foreach.hpp>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
@@ -138,12 +138,14 @@ void datastore::create_snapshot() noexcept {
     };
 #if defined SORT_METHOD_PUT_ONLY
     auto add_entry = insert_twisted_entry;
+    bool works_with_multi_thread = true;
 #else
     auto add_entry = insert_entry_or_update_to_max;
+    bool works_with_multi_thread = false;
 #endif
-    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
+    auto process_file = [ld_epoch, &add_entry](const boost::filesystem::path& p) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
+            VLOG(log_info) << "processing pwal file: " << p.filename().string();
             log_entry e;
             epoch_id_type current_epoch{UINT64_MAX};
 
@@ -170,6 +172,33 @@ void datastore::create_snapshot() noexcept {
             }
             istrm.close();
         }
+    };
+
+    int num_worker = 8;  // TODO: read from config recover_max_pararelism
+    if (!works_with_multi_thread && num_worker > 1) {
+        LOG_LP(ERROR) << "this sort method does not work correctly with multi-thread, so force num_worker = 1";
+        num_worker = 1;
+    }
+    std::mutex dir_mtx;
+    auto dir_begin = boost::filesystem::directory_iterator(from_dir);
+    auto dir_end = boost::filesystem::directory_iterator();
+    std::vector<std::thread> workers;
+    workers.reserve(num_worker);
+    for (int i = 0; i < num_worker; i++) {
+        workers.emplace_back(std::thread([&dir_mtx, &dir_begin, &dir_end, &process_file](){
+            for (;;) {
+                boost::filesystem::path p;
+                {
+                    std::lock_guard<std::mutex> g{dir_mtx};
+                    if (dir_begin == dir_end) break;
+                    p = *dir_begin++;
+                }
+                process_file(p);
+            }
+        }));
+    }
+    for (int i = 0; i < num_worker; i++) {
+        workers[i].join();
     }
 
     boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));
