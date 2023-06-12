@@ -17,9 +17,11 @@
 
 #ifdef SORT_METHOD_USE_ROCKSDB
 #include <rocksdb/db.h>
+#include <rocksdb/comparator.h>
 namespace leveldb = rocksdb;
 #else
 #include <leveldb/db.h>
+#include <leveldb/comparator.h>
 #endif
 
 #include <glog/logging.h>
@@ -33,15 +35,24 @@ static constexpr const std::string_view leveldb_dir = "leveldb";
 // leveldb_wrapper : the wrapper for LevelDB or compatible one (e.g. RocksDB)
 class leveldb_wrapper {
 public:
+    // type of user-defined key-comparator function
+    using keycomp = int(*)(const std::string_view& a, const std::string_view& b);
+
     /**
      * @brief create new object
      * @param dir the directory where LevelDB files will be placed
+     * @param keycomp (optional) user-defined comparator
      */
-    explicit leveldb_wrapper(const boost::filesystem::path& dir) : lvldb_path_(dir / boost::filesystem::path(std::string(leveldb_dir))) {
+    explicit leveldb_wrapper(const boost::filesystem::path& dir, keycomp keycomp = nullptr)
+        : lvldb_path_(dir / boost::filesystem::path(std::string(leveldb_dir))) {
         clear_directory();
         
         leveldb::Options options;
         options.create_if_missing = true;
+        if (keycomp != nullptr) {
+            comp_ = std::make_unique<comparator>(keycomp);
+            options.comparator = comp_.get();
+        }
         if (leveldb::Status status = leveldb::DB::Open(options, lvldb_path_.string(), &lvldb_); !status.ok()) {
             LOG_LP(ERROR) << "Unable to open/create LevelDB database, status = " << status.ToString();
             std::abort();
@@ -86,6 +97,22 @@ public:
     
 private:
     leveldb::DB* lvldb_{};
+
+    // user-defined comparator wrapper
+    class comparator : public leveldb::Comparator {
+        keycomp keycomp_;
+    public:
+        explicit comparator(keycomp keycomp) : keycomp_(keycomp) {}
+        [[nodiscard]] const char *Name() const override { return "custom comparator"; }
+        void FindShortestSeparator(std::string *, const leveldb::Slice&) const override {}
+        void FindShortSuccessor(std::string *) const override {}
+        [[nodiscard]] int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override {
+            return keycomp_(std::string_view{a.data(), a.size()}, std::string_view{b.data(), b.size()});
+        }
+    };
+
+    std::unique_ptr<comparator> comp_{};
+
     boost::filesystem::path lvldb_path_;
 
     void clear_directory() const noexcept {
