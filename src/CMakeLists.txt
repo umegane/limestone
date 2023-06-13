@@ -16,6 +16,9 @@ if(${RECOVERY_SORTER_KVSLIB_UPPERCASE} STREQUAL "ROCKSDB")
 else()
     set(sort_lib leveldb)
 endif()
+if(RECOVERY_SORTER_PUT_ONLY)
+    target_compile_options(${package_name} PRIVATE -DSORT_METHOD_PUT_ONLY)
+endif()
 
 target_link_libraries(${package_name}
         PUBLIC limestone-api

@@ -44,6 +44,8 @@ endif()
 # TODO: default-value LEVELDB -> ROCKSDB
 set(RECOVERY_SORTER_KVSLIB LEVELDB CACHE STRING "using eKVS library at recovery process")
 string(TOUPPER $CACHE{RECOVERY_SORTER_KVSLIB} RECOVERY_SORTER_KVSLIB_UPPERCASE)
+# TODO: default-value OFF -> ON
+option(RECOVERY_SORTER_PUT_ONLY "using put-only method at recovery process (faster)" OFF)
 
 # set(ENGINE "engine")
 
