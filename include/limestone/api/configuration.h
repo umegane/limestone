@@ -47,10 +47,20 @@ public:
      */
     configuration(const std::vector<boost::filesystem::path>&& data_locations, boost::filesystem::path metadata_location) noexcept;
 
+    /**
+     * @brief setter for recover_max_pararelism
+     * @param recover_max_pararelism  the number of recover_max_pararelism
+     */
+    void set_recover_max_pararelism(int recover_max_pararelism) {
+        recover_max_pararelism_ = recover_max_pararelism;
+    }
+
 private:
     std::vector<boost::filesystem::path> data_locations_{};
 
     boost::filesystem::path metadata_location_{};
+
+    int recover_max_pararelism_{8};
 
     friend class datastore;
 };
