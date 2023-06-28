@@ -27,6 +27,11 @@ class datastore;
  * @brief configuration for datastore
  */
 class configuration {
+    /**
+     * @brief default value of recover_max_pararelism
+     */
+    static constexpr int default_recover_max_pararelism = 8;
+
 public:
     /**
      * @brief create empty object
@@ -60,7 +65,7 @@ private:
 
     boost::filesystem::path metadata_location_{};
 
-    int recover_max_pararelism_{8};
+    int recover_max_pararelism_{default_recover_max_pararelism};
 
     friend class datastore;
 };
