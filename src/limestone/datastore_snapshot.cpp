@@ -26,7 +26,7 @@
 
 #include <limestone/api/datastore.h>
 #include "log_entry.h"
-#include "leveldb_wrapper.h"
+#include "sortdb_wrapper.h"
 
 namespace limestone::api {
 
@@ -95,21 +95,21 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
 void datastore::create_snapshot() noexcept {
     auto& from_dir = location_;
 #if defined SORT_METHOD_PUT_ONLY
-    auto lvldb = std::make_unique<leveldb_wrapper>(from_dir, comp_twisted_key);
+    auto sortdb = std::make_unique<sortdb_wrapper>(from_dir, comp_twisted_key);
 #else
-    auto lvldb = std::make_unique<leveldb_wrapper>(from_dir);
+    auto sortdb = std::make_unique<sortdb_wrapper>(from_dir);
 #endif
 
     epoch_id_type ld_epoch = last_durable_epoch_in_dir();
     epoch_id_switched_.store(ld_epoch + 1);
 
     [[maybe_unused]]
-    auto insert_entry_or_update_to_max = [&lvldb](log_entry& e){
+    auto insert_entry_or_update_to_max = [&sortdb](log_entry& e){
         bool need_write = true;
 
         // skip older entry than already inserted
         std::string value;
-        if (lvldb->get(e.key_sid(), &value)) {
+        if (sortdb->get(e.key_sid(), &value)) {
             write_version_type write_version;
             e.write_version(write_version);
             if (write_version < write_version_type(value.substr(1))) {
@@ -121,11 +121,11 @@ void datastore::create_snapshot() noexcept {
             std::string db_value;
             db_value.append(1, static_cast<char>(e.type()));
             db_value.append(e.value_etc());
-            lvldb->put(e.key_sid(), db_value);
+            sortdb->put(e.key_sid(), db_value);
         }
     };
     [[maybe_unused]]
-    auto insert_twisted_entry = [&lvldb](log_entry& e){
+    auto insert_twisted_entry = [&sortdb](log_entry& e){
         // key_sid: storage_id[8] key[*], value_etc: epoch[8]LE minor_version[8]LE value[*], type: type[1]
         // db_key: epoch[8]BE minor_version[8]BE storage_id[8] key[*], db_value: type[1] value[*]
         std::string db_key(write_version_size + e.key_sid().size(), '\0');
@@ -134,7 +134,7 @@ void datastore::create_snapshot() noexcept {
         std::memcpy(&db_key[write_version_size], e.key_sid().data(), e.key_sid().size());
         std::string db_value(1, static_cast<char>(e.type()));
         db_value.append(e.value_etc().substr(write_version_size));
-        lvldb->put(db_key, db_value);
+        sortdb->put(db_key, db_value);
     };
 #if defined SORT_METHOD_PUT_ONLY
     auto add_entry = insert_twisted_entry;
@@ -222,7 +222,7 @@ void datastore::create_snapshot() noexcept {
     }
     static_assert(sizeof(log_entry::entry_type) == 1);
 #if defined SORT_METHOD_PUT_ONLY
-    lvldb->each([&ostrm, last_key = std::string{}](std::string_view db_key, std::string_view db_value) mutable {
+    sortdb->each([&ostrm, last_key = std::string{}](std::string_view db_key, std::string_view db_value) mutable {
         // using the first entry in GROUP BY (original-)key
         // NB: max versions comes first (by the custom-comparator)
         std::string_view key(db_key.data() + write_version_size, db_key.size() - write_version_size);
@@ -249,7 +249,7 @@ void datastore::create_snapshot() noexcept {
         }
     });
 #else
-    lvldb->each([&ostrm](std::string_view db_key, std::string_view db_value) {
+    sortdb->each([&ostrm](std::string_view db_key, std::string_view db_value) {
         auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
         db_value.remove_prefix(1);
         switch (entry_type) {

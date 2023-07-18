@@ -18,7 +18,6 @@
 #ifdef SORT_METHOD_USE_ROCKSDB
 #include <rocksdb/db.h>
 #include <rocksdb/comparator.h>
-namespace leveldb = rocksdb;
 #else
 #include <leveldb/db.h>
 #include <leveldb/comparator.h>
@@ -29,32 +28,36 @@ namespace leveldb = rocksdb;
 #include <limestone/logging.h>
 
 namespace limestone::api {
+#ifdef SORT_METHOD_USE_ROCKSDB
+    using namespace rocksdb;
+#else
+    using namespace leveldb;
+#endif
 
-static constexpr const std::string_view leveldb_dir = "leveldb";
+static constexpr const std::string_view sortdb_dir = "sorting";
 
-// leveldb_wrapper : the wrapper for LevelDB or compatible one (e.g. RocksDB)
-class leveldb_wrapper {
+class sortdb_wrapper {
 public:
     // type of user-defined key-comparator function
     using keycomp = int(*)(const std::string_view& a, const std::string_view& b);
 
     /**
      * @brief create new object
-     * @param dir the directory where LevelDB files will be placed
+     * @param dir the directory where DB library files will be placed
      * @param keycomp (optional) user-defined comparator
      */
-    explicit leveldb_wrapper(const boost::filesystem::path& dir, keycomp keycomp = nullptr)
-        : lvldb_path_(dir / boost::filesystem::path(std::string(leveldb_dir))) {
+    explicit sortdb_wrapper(const boost::filesystem::path& dir, keycomp keycomp = nullptr)
+        : workdir_path_(dir / boost::filesystem::path(std::string(sortdb_dir))) {
         clear_directory();
         
-        leveldb::Options options;
+        Options options;
         options.create_if_missing = true;
         if (keycomp != nullptr) {
             comp_ = std::make_unique<comparator>(keycomp);
             options.comparator = comp_.get();
         }
-        if (leveldb::Status status = leveldb::DB::Open(options, lvldb_path_.string(), &lvldb_); !status.ok()) {
-            LOG_LP(ERROR) << "Unable to open/create LevelDB database, status = " << status.ToString();
+        if (Status status = DB::Open(options, workdir_path_.string(), &sortdb_); !status.ok()) {
+            LOG_LP(ERROR) << "Unable to open/create database working files, status = " << status.ToString();
             std::abort();
         }
     }
@@ -62,65 +65,65 @@ public:
     /**
      * @brief destruct object
      */
-    ~leveldb_wrapper() {
-        delete lvldb_;
+    ~sortdb_wrapper() {
+        delete sortdb_;
         clear_directory();
     }
 
-    leveldb_wrapper() noexcept = delete;
-    leveldb_wrapper(leveldb_wrapper const& other) noexcept = delete;
-    leveldb_wrapper& operator=(leveldb_wrapper const& other) noexcept = delete;
-    leveldb_wrapper(leveldb_wrapper&& other) noexcept = delete;
-    leveldb_wrapper& operator=(leveldb_wrapper&& other) noexcept = delete;
+    sortdb_wrapper() noexcept = delete;
+    sortdb_wrapper(sortdb_wrapper const& other) noexcept = delete;
+    sortdb_wrapper& operator=(sortdb_wrapper const& other) noexcept = delete;
+    sortdb_wrapper(sortdb_wrapper&& other) noexcept = delete;
+    sortdb_wrapper& operator=(sortdb_wrapper&& other) noexcept = delete;
 
     bool put(const std::string& key, const std::string& value) {
-        leveldb::WriteOptions write_options{};
-        auto status = lvldb_->Put(write_options, key, value);
+        WriteOptions write_options{};
+        auto status = sortdb_->Put(write_options, key, value);
         return status.ok();
     }
 
     bool get(const std::string& key, std::string* value) {
-        leveldb::ReadOptions read_options{};
-        auto status = lvldb_->Get(read_options, key, value);
+        ReadOptions read_options{};
+        auto status = sortdb_->Get(read_options, key, value);
         return status.ok();
     }
 
     void each(const std::function<void(std::string_view, std::string_view)>& fun) {
-        leveldb::Iterator* it = lvldb_->NewIterator(leveldb::ReadOptions());  // NOLINT (typical usage of leveldb)
+        Iterator* it = sortdb_->NewIterator(ReadOptions());  // NOLINT (typical usage of API)
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
-            leveldb::Slice key = it->key();
-            leveldb::Slice value = it->value();
+            Slice key = it->key();
+            Slice value = it->value();
             fun(std::string_view(key.data(), key.size()), std::string_view(value.data(), value.size()));
         }
-        delete it;  // NOLINT (typical usage of leveldb)
+        delete it;  // NOLINT (typical usage of API)
     }
     
 private:
-    leveldb::DB* lvldb_{};
+    DB* sortdb_{};
 
     // user-defined comparator wrapper
-    class comparator : public leveldb::Comparator {
+    class comparator : public Comparator {
         keycomp keycomp_;
     public:
         explicit comparator(keycomp keycomp) : keycomp_(keycomp) {}
         [[nodiscard]] const char *Name() const override { return "custom comparator"; }
-        void FindShortestSeparator(std::string *, const leveldb::Slice&) const override {}
+        void FindShortestSeparator(std::string *, const Slice&) const override {}
         void FindShortSuccessor(std::string *) const override {}
-        [[nodiscard]] int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override {
+        [[nodiscard]] int Compare(const Slice& a, const Slice& b) const override {
             return keycomp_(std::string_view{a.data(), a.size()}, std::string_view{b.data(), b.size()});
         }
     };
 
     std::unique_ptr<comparator> comp_{};
 
-    boost::filesystem::path lvldb_path_;
+    boost::filesystem::path workdir_path_;
 
     void clear_directory() const noexcept {
-        if (boost::filesystem::exists(lvldb_path_)) {
-            if (boost::filesystem::is_directory(lvldb_path_)) {
-                boost::filesystem::remove_all(lvldb_path_);
+        if (boost::filesystem::exists(workdir_path_)) {
+            if (boost::filesystem::is_directory(workdir_path_)) {
+                boost::filesystem::remove_all(workdir_path_);
             } else {
-                LOG_LP(ERROR) << lvldb_path_.string() << " is not a directory";
+                LOG_LP(ERROR) << workdir_path_.string() << " is not a directory";
                 std::abort();
             }
         }
