@@ -32,8 +32,7 @@ namespace limestone::api {
 
 datastore::datastore() noexcept = default;
 
-datastore::datastore(configuration const& conf) {
-    location_ = conf.data_locations_.at(0);
+datastore::datastore(configuration const& conf) : location_(conf.data_locations_.at(0)) {
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
     if (!result_check || error) {
@@ -193,7 +192,7 @@ backup& datastore::begin_backup() {
     return *backup_;
 }
 
-std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {
+std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {  // NOLINT(readability-function-cognitive-complexity)
     rotate_log_files();
 
     // LOG-0: all files are log file, so all files are selected in both standard/transaction mode.

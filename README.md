@@ -25,7 +25,7 @@ optional packages:
 
 * `doxygen`
 * `graphviz`
-* `clang-tidy-8`
+* `clang-tidy`
 
 ## How to build
 
