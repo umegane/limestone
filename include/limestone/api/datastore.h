@@ -120,14 +120,14 @@ public:
      * @details snapshot used is location_ / snapshot::subdirectory_name_ / snapshot::file_name_
      * @return the reference to the object associated with the latest available snapshot
      */
-    std::unique_ptr<snapshot> get_snapshot() const noexcept;
+    std::unique_ptr<snapshot> get_snapshot() const;
 
     /**
      * @brief provides a shared pointer of the snapshot object
      * @details snapshot is location_ / snapshot::subdirectory_name_ / snapshot::file_name_
      * @return a shared pointer to the object associated with the latest available snapshot
      */
-    std::shared_ptr<snapshot> shared_snapshot() const noexcept;
+    std::shared_ptr<snapshot> shared_snapshot() const;
 
     /**
      * @brief create a log_channel to write logs to a file
@@ -136,7 +136,7 @@ public:
      * @return the reference of the log_channel
      * @attention this function should be called before the ready() is called.
      */
-    log_channel& create_channel(const boost::filesystem::path& location) noexcept;
+    log_channel& create_channel(const boost::filesystem::path& location);
 
     /**
      * @brief provide the largest epoch ID
@@ -190,7 +190,7 @@ public:
      * @detail a backup object is created, which contains a list of log files.
      * @return a reference to the backup object.
      */
-    backup& begin_backup() noexcept;
+    backup& begin_backup();
 
     // backup (prusik era)
     /**

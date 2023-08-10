@@ -48,7 +48,7 @@ public:
      * @attention this function is thread-safe.
      * @return unique pointer of the cursor
      */
-    [[nodiscard]] std::unique_ptr<cursor> get_cursor() const noexcept;
+    [[nodiscard]] std::unique_ptr<cursor> get_cursor() const;
 
     /**
      * @brief create a cursor for an entry at a given location on the snapshot and returns it

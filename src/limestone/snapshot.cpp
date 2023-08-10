@@ -26,7 +26,7 @@ namespace limestone::api {  // FIXME fill implementation
 snapshot::snapshot(const boost::filesystem::path& location) noexcept : dir_(location / boost::filesystem::path(std::string(subdirectory_name_))) {
 }
 
-std::unique_ptr<cursor> snapshot::get_cursor() const noexcept {
+std::unique_ptr<cursor> snapshot::get_cursor() const {
     return std::unique_ptr<cursor>(new cursor(file_path()));
 }
 

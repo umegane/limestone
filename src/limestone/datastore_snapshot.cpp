@@ -92,7 +92,7 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
     return std::memcmp(b.data(), a.data(), write_version_size);
 }
 
-void datastore::create_snapshot() noexcept {
+void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cognitive-complexity)
     auto& from_dir = location_;
 #if defined SORT_METHOD_PUT_ONLY
     auto sortdb = std::make_unique<sortdb_wrapper>(from_dir, comp_twisted_key);
@@ -129,7 +129,7 @@ void datastore::create_snapshot() noexcept {
         // key_sid: storage_id[8] key[*], value_etc: epoch[8]LE minor_version[8]LE value[*], type: type[1]
         // db_key: epoch[8]BE minor_version[8]BE storage_id[8] key[*], db_value: type[1] value[*]
         std::string db_key(write_version_size + e.key_sid().size(), '\0');
-        store_bswap64_value(&db_key[0], &e.value_etc()[0]);
+        store_bswap64_value(&db_key[0], &e.value_etc()[0]);  // NOLINT(readability-container-data-pointer)
         store_bswap64_value(&db_key[8], &e.value_etc()[8]);
         std::memcpy(&db_key[write_version_size], e.key_sid().data(), e.key_sid().size());
         std::string db_value(1, static_cast<char>(e.type()));

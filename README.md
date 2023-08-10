@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* CMake `>= 3.10`
+* CMake `>= 3.16`
 * C++ Compiler `>= C++17`
 * and see *Dockerfile* section
 
@@ -25,7 +25,7 @@ optional packages:
 
 * `doxygen`
 * `graphviz`
-* `clang-tidy-8`
+* `clang-tidy`
 
 ## How to build
 

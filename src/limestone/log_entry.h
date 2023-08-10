@@ -94,11 +94,11 @@ public:
         write_uint32(strm, static_cast<std::uint32_t>(value_len));
 
         write_uint64(strm, static_cast<std::uint64_t>(storage_id));
-        strm.write(key.data(), key_len);
+        strm.write(key.data(), static_cast<std::streamsize>(key_len));
 
         write_uint64(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
         write_uint64(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
-        strm.write(value.data(), value_len);
+        strm.write(value.data(), static_cast<std::streamsize>(value_len));
     }
 
     static void write(boost::filesystem::ofstream& strm, std::string_view key_sid, std::string_view value_etc) {
@@ -113,8 +113,8 @@ public:
         assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         write_uint32(strm, static_cast<std::uint32_t>(value_len));
 
-        strm.write(key_sid.data(), key_sid.length());
-        strm.write(value_etc.data(), value_etc.length());
+        strm.write(key_sid.data(), static_cast<std::streamsize>(key_sid.length()));
+        strm.write(value_etc.data(), static_cast<std::streamsize>(value_etc.length()));
     }
 
     static void write_remove(boost::filesystem::ofstream& strm, storage_id_type storage_id, std::string_view key, write_version_type write_version) {
@@ -126,7 +126,7 @@ public:
         write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
         write_uint64(strm, static_cast<std::uint64_t>(storage_id));
-        strm.write(key.data(), key_len);
+        strm.write(key.data(), static_cast<std::streamsize>(key_len));
 
         write_uint64(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
         write_uint64(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
@@ -140,8 +140,8 @@ public:
         assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         write_uint32(strm, static_cast<std::uint32_t>(key_len));
 
-        strm.write(key_sid.data(), key_sid.length());
-        strm.write(value_etc.data(), value_etc.length());
+        strm.write(key_sid.data(), static_cast<std::streamsize>(key_sid.length()));
+        strm.write(value_etc.data(), static_cast<std::streamsize>(value_etc.length()));
     }
 
 // for reader
@@ -159,9 +159,9 @@ public:
             std::size_t value_len = read_uint32(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
-            strm.read(key_sid_.data(), key_sid_.length());
+            strm.read(key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
             value_etc_.resize(value_len + sizeof(epoch_id_type) + sizeof(std::uint64_t));
-            strm.read(value_etc_.data(), value_etc_.length());
+            strm.read(value_etc_.data(), static_cast<std::streamsize>(value_etc_.length()));
             break;
         }
         case entry_type::remove_entry:
@@ -169,9 +169,9 @@ public:
             std::size_t key_len = read_uint32(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
-            strm.read(key_sid_.data(), key_sid_.length());
+            strm.read(key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
             value_etc_.resize(sizeof(epoch_id_type) + sizeof(std::uint64_t));
-            strm.read(value_etc_.data(), value_etc_.length());
+            strm.read(value_etc_.data(), static_cast<std::streamsize>(value_etc_.length()));
             break;
         }
         case entry_type::marker_begin:

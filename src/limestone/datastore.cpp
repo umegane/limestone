@@ -32,8 +32,7 @@ namespace limestone::api {
 
 datastore::datastore() noexcept = default;
 
-datastore::datastore(configuration const& conf) {
-    location_ = conf.data_locations_.at(0);
+datastore::datastore(configuration const& conf) : location_(conf.data_locations_.at(0)) {
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
     if (!result_check || error) {
@@ -81,17 +80,17 @@ void datastore::ready() noexcept {
     state_ = state::ready;
 }
 
-std::unique_ptr<snapshot> datastore::get_snapshot() const noexcept {
+std::unique_ptr<snapshot> datastore::get_snapshot() const {
     check_after_ready(static_cast<const char*>(__func__));
     return std::unique_ptr<snapshot>(new snapshot(location_));
 }
 
-std::shared_ptr<snapshot> datastore::shared_snapshot() const noexcept {
+std::shared_ptr<snapshot> datastore::shared_snapshot() const {
     check_after_ready(static_cast<const char*>(__func__));
     return std::shared_ptr<snapshot>(new snapshot(location_));
 }
 
-log_channel& datastore::create_channel(const boost::filesystem::path& location) noexcept {
+log_channel& datastore::create_channel(const boost::filesystem::path& location) {
     check_before_ready(static_cast<const char*>(__func__));
     
     std::lock_guard<std::mutex> lock(mtx_channel_);
@@ -188,12 +187,12 @@ std::future<void> datastore::shutdown() noexcept {
 }
 
 // old interface
-backup& datastore::begin_backup() noexcept {
+backup& datastore::begin_backup() {
     backup_ = std::unique_ptr<backup>(new backup(files_));
     return *backup_;
 }
 
-std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {
+std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {  // NOLINT(readability-function-cognitive-complexity)
     rotate_log_files();
 
     // LOG-0: all files are log file, so all files are selected in both standard/transaction mode.
