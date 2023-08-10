@@ -10,6 +10,16 @@ set_target_properties(${package_name} PROPERTIES
         OUTPUT_NAME ${export_name}
         )
 
+if(${RECOVERY_SORTER_KVSLIB_UPPERCASE} STREQUAL "ROCKSDB")
+    set(sort_lib RocksDB::RocksDB)
+    target_compile_options(${package_name} PRIVATE -DSORT_METHOD_USE_ROCKSDB)
+else()
+    set(sort_lib leveldb)
+endif()
+if(RECOVERY_SORTER_PUT_ONLY)
+    target_compile_options(${package_name} PRIVATE -DSORT_METHOD_PUT_ONLY)
+endif()
+
 target_link_libraries(${package_name}
         PUBLIC limestone-api
         PRIVATE Boost::boost
@@ -17,7 +27,7 @@ target_link_libraries(${package_name}
         PRIVATE Boost::thread
         PRIVATE Boost::container
         PRIVATE glog::glog
-        PRIVATE leveldb
+        PRIVATE ${sort_lib}
 )
 
 set_compile_options(${package_name})
@@ -38,5 +48,5 @@ target_link_libraries(limestone-impl
         INTERFACE Boost::thread
         INTERFACE Boost::container
         INTERFACE glog::glog
-        INTERFACE leveldb
+        INTERFACE ${sort_lib}
 )

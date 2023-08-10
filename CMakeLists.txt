@@ -41,6 +41,12 @@ if (ENABLE_GOOGLE_PERFTOOLS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_GOOGLE_PERFTOOLS")
 endif()
 
+# TODO: default-value LEVELDB -> ROCKSDB
+set(RECOVERY_SORTER_KVSLIB LEVELDB CACHE STRING "using eKVS library at recovery process")
+string(TOUPPER $CACHE{RECOVERY_SORTER_KVSLIB} RECOVERY_SORTER_KVSLIB_UPPERCASE)
+# TODO: default-value OFF -> ON
+option(RECOVERY_SORTER_PUT_ONLY "using put-only method at recovery process (faster)" OFF)
+
 # set(ENGINE "engine")
 
 find_package(Doxygen)
@@ -51,7 +57,13 @@ find_package(Boost
         COMPONENTS filesystem thread system container stacktrace_backtrace
         REQUIRED
         )
-find_package(leveldb REQUIRED)
+if(${RECOVERY_SORTER_KVSLIB_UPPERCASE} STREQUAL "ROCKSDB")
+    find_package(RocksDB REQUIRED)
+elseif(${RECOVERY_SORTER_KVSLIB_UPPERCASE} STREQUAL "LEVELDB")
+    find_package(leveldb REQUIRED)
+else()
+    message(FATAL_ERROR "unsupported RECOVERY_SORTER_KVSLIB value: ${RECOVERY_SORTER_KVSLIB_UPPERCASE}")
+endif()
       
 add_subdirectory(third_party) # should be before enable_testing()
 

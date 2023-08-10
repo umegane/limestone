@@ -27,6 +27,11 @@ class datastore;
  * @brief configuration for datastore
  */
 class configuration {
+    /**
+     * @brief default value of recover_max_pararelism
+     */
+    static constexpr int default_recover_max_pararelism = 8;
+
 public:
     /**
      * @brief create empty object
@@ -47,10 +52,20 @@ public:
      */
     configuration(const std::vector<boost::filesystem::path>&& data_locations, boost::filesystem::path metadata_location) noexcept;
 
+    /**
+     * @brief setter for recover_max_pararelism
+     * @param recover_max_pararelism  the number of recover_max_pararelism
+     */
+    void set_recover_max_pararelism(int recover_max_pararelism) {
+        recover_max_pararelism_ = recover_max_pararelism;
+    }
+
 private:
     std::vector<boost::filesystem::path> data_locations_{};
 
     boost::filesystem::path metadata_location_{};
+
+    int recover_max_pararelism_{default_recover_max_pararelism};
 
     friend class datastore;
 };
