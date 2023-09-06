@@ -174,7 +174,7 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         }
     };
 
-    int num_worker = recover_max_pararelism_;
+    int num_worker = recover_max_parallelism_;
     if (!works_with_multi_thread && num_worker > 1) {
         LOG_LP(ERROR) << "this sort method does not work correctly with multi-thread, so force num_worker = 1";
         num_worker = 1;

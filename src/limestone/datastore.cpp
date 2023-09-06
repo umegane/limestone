@@ -64,7 +64,7 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
         add_file(epoch_file_path_);
     }
 
-    recover_max_pararelism_ = conf.recover_max_pararelism_;
+    recover_max_parallelism_ = conf.recover_max_parallelism_;
 
     VLOG_LP(log_debug) << "datastore is created, location = " << location_.string();
 }

@@ -252,7 +252,7 @@ private:
 
     std::mutex mtx_files_{};
 
-    int recover_max_pararelism_{};
+    int recover_max_parallelism_{};
 
     std::mutex mtx_epoch_file_{};
 
