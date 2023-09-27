@@ -55,13 +55,12 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
     const bool result = boost::filesystem::exists(epoch_file_path_, error);
     if (!result || error) {
-        boost::filesystem::ofstream strm{};
-        strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
-        if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
+        FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT
+        if (!strm) {
             LOG_LP(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
             throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
         }
-        strm.close();
+        fclose(strm);  // NOLINT TODO: error check
         add_file(epoch_file_path_);
     }
 
@@ -156,10 +155,9 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {
         if (epoch_id_recorded_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
             std::lock_guard<std::mutex> lock(mtx_epoch_file_);
 
-            boost::filesystem::ofstream strm{};
-            strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary );
+            FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT TODO: error check
             log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
-            strm.close();
+            fclose(strm);  // NOLINT TODO: error check
             break;
         }
     }

@@ -58,22 +58,20 @@ protected:
 };
 
 TEST_F(log_entry_4_LevelDB_test, write_and_read_and_write_and_read) {
-    boost::filesystem::ofstream ostrm;
     limestone::api::log_entry log_entry;
     
-    ostrm.open(file1_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    FILE* ostrm = fopen(file1_.c_str(), "a");
     limestone::api::log_entry::write(ostrm, storage_id, key, value, write_version);
-    ostrm.close();
+    fclose(ostrm);
 
     boost::filesystem::ifstream istrm;
     istrm.open(file1_, std::ios_base::in | std::ios_base::binary);
-    boost::filesystem::ofstream ostrm2;
-    ostrm2.open(file2_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    FILE* ostrm2 = fopen(file2_.c_str(), "a");
     while(log_entry.read(istrm)) {
         limestone::api::log_entry::write(ostrm2, log_entry.key_sid(), log_entry.value_etc());
     }
     istrm.close();
-    ostrm2.close();
+    fclose(ostrm2);
 
     boost::filesystem::ifstream istrm2;
     istrm2.open(file2_, std::ios_base::in | std::ios_base::binary);

@@ -44,7 +44,8 @@ void log_channel::begin_session() noexcept {
     } while (current_epoch_id_.load() != envelope_.epoch_id_switched_.load());
 
     auto log_file = file_path();
-    strm_.open(log_file, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    strm_ = fopen(log_file.c_str(), "a");  // NOLINT TODO: error check
+    setvbuf(strm_, nullptr, _IOFBF, 1024L * 1024L);  // NOLINT TODO: error check
     if (!registered_) {
         envelope_.add_file(log_file);
         registered_ = true;
@@ -53,11 +54,15 @@ void log_channel::begin_session() noexcept {
 }
 
 void log_channel::end_session() noexcept {
-    strm_.flush();
+    fflush(strm_);  // NOLINT TODO: error check
+    if (int rc = fsync(fileno(strm_)); rc != 0) {
+        LOG_LP(ERROR) << "fsync failed, errno = " << errno;
+        std::abort();
+    }
     finished_epoch_id_.store(current_epoch_id_.load());
     current_epoch_id_.store(UINT64_MAX);
     envelope_.update_min_epoch_id();
-    strm_.close();
+    fclose(strm_);  // NOLINT TODO: error check
 }
 
 void log_channel::abort_session([[maybe_unused]] status status_code, [[maybe_unused]] const std::string& message) noexcept {
