@@ -212,14 +212,14 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         }
     }
 
-    boost::filesystem::ofstream ostrm{};
     boost::filesystem::path snapshot_file = sub_dir / boost::filesystem::path(std::string(snapshot::file_name_));
     VLOG_LP(log_info) << "generating snapshot file: " << snapshot_file;
-    ostrm.open(snapshot_file, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-    if( ostrm.fail() ){
+    FILE* ostrm = fopen(snapshot_file.c_str(), "w");  // NOLINT
+    if (!ostrm) {
         LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
         std::abort();
     }
+    setvbuf(ostrm, nullptr, _IOFBF, 1024L * 1024L);  // NOLINT TODO: error check
     static_assert(sizeof(log_entry::entry_type) == 1);
 #if defined SORT_METHOD_PUT_ONLY
     sortdb->each([&ostrm, last_key = std::string{}](std::string_view db_key, std::string_view db_value) mutable {
@@ -264,7 +264,7 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         }
     });
 #endif
-    ostrm.close();
+    fclose(ostrm);  // NOLINT TODO: error check
 }
 
 } // namespace limestone::api

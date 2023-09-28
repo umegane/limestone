@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2022 tsurugi project.
+ * Copyright 2022-2023 tsurugi project.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,11 +56,9 @@ protected:
 };
 
 TEST_F(log_entry_test, write_and_read) {
-    boost::filesystem::ofstream ostrm;
-    
-    ostrm.open(file1_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    FILE* ostrm = fopen(file1_.c_str(), "a");
     limestone::api::log_entry::write(ostrm, storage_id, key, value, write_version);
-    ostrm.close();
+    fclose(ostrm);
 
     boost::filesystem::ifstream istrm;
     istrm.open(file1_, std::ios_base::in | std::ios_base::binary);
@@ -84,21 +82,18 @@ TEST_F(log_entry_test, write_and_read) {
 }
 
 TEST_F(log_entry_test, write_and_read_and_write_and_read) {
-    boost::filesystem::ofstream ostrm;
-    
-    ostrm.open(file1_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    FILE* ostrm = fopen(file1_.c_str(), "a");
     limestone::api::log_entry::write(ostrm, storage_id, key, value, write_version);
-    ostrm.close();
+    fclose(ostrm);
 
     boost::filesystem::ifstream istrm;
     istrm.open(file1_, std::ios_base::in | std::ios_base::binary);
     log_entry_.read(istrm);
     istrm.close();
 
-    boost::filesystem::ofstream ostrm2;
-    ostrm2.open(file2_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
+    FILE* ostrm2 = fopen(file2_.c_str(), "a");
     limestone::api::log_entry::write(ostrm2, storage_id, key, value, write_version);
-    ostrm2.close();
+    fclose(ostrm2);
 
     boost::filesystem::ifstream istrm2;
     istrm2.open(file2_, std::ios_base::in | std::ios_base::binary);

@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <cstdio>
 #include <string>
 #include <string_view>
 #include <cstdint>
@@ -128,7 +129,7 @@ public:
     /**
      * @brief this is for test purpose only, must not be used for any purpose other than testing
      */
-    boost::filesystem::path file_path() const noexcept;
+    [[nodiscard]] boost::filesystem::path file_path() const noexcept;
 
 private:
     datastore& envelope_;
@@ -139,7 +140,7 @@ private:
 
     std::size_t id_{};
 
-    boost::filesystem::ofstream strm_;
+    FILE* strm_{};
 
     bool registered_{};
 
