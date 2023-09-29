@@ -130,24 +130,12 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {
         }
     }
 
+    // update recorded_epoch_
     auto to_be_epoch = upper_limit;
-    auto old_epoch_id = epoch_id_informed_.load();
-    while (true) {
-        if (old_epoch_id >= to_be_epoch) {
-            break;
-        }
-        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
-            if (persistent_callback_) {
-                persistent_callback_(to_be_epoch);
-            }
-            break;
-        }
-    }
-
     if (from_switch_epoch && (to_be_epoch > static_cast<std::uint64_t>(max_finished_epoch))) {
         to_be_epoch = static_cast<std::uint64_t>(max_finished_epoch);
     }
-    old_epoch_id = epoch_id_recorded_.load();
+    auto old_epoch_id = epoch_id_recorded_.load();
     while (true) {
         if (old_epoch_id >= to_be_epoch) {
             break;
@@ -157,7 +145,27 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {
 
             FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT TODO: error check
             log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
+            fflush(strm);  // NOLINT TODO: error check
+            if (int rc = fsync(fileno(strm)); rc != 0) {
+                LOG_LP(ERROR) << "fsync failed, errno = " << errno;
+                std::abort();
+            }
             fclose(strm);  // NOLINT TODO: error check
+            break;
+        }
+    }
+
+    // update informed_epoch_
+    to_be_epoch = upper_limit;
+    old_epoch_id = epoch_id_informed_.load();
+    while (true) {
+        if (old_epoch_id >= to_be_epoch) {
+            break;
+        }
+        if (epoch_id_informed_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
+            if (persistent_callback_) {
+                persistent_callback_(to_be_epoch);
+            }
             break;
         }
     }
