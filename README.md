@@ -23,8 +23,6 @@ RUN apt update -y && apt install -y git build-essential cmake ninja-build libboo
 
 optional packages:
 
-* `doxygen`
-* `graphviz`
 * `clang-tidy`
 
 ## How to build
@@ -64,12 +62,6 @@ cmake --build . --target install
 
 ```sh
 ctest -V
-```
-
-### generate documents
-
-```sh
-cmake --build . --target doxygen
 ```
 
 ## License
