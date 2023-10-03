@@ -264,7 +264,10 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         }
     });
 #endif
-    fclose(ostrm);  // NOLINT TODO: error check
+    if (fclose(ostrm) != 0) {  // NOLINT
+        LOG_LP(ERROR) << "cannot close snapshot file (" << snapshot_file << "), errno = " << errno;
+        std::abort();
+    }
 }
 
 } // namespace limestone::api

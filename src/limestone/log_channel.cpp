@@ -44,7 +44,11 @@ void log_channel::begin_session() noexcept {
     } while (current_epoch_id_.load() != envelope_.epoch_id_switched_.load());
 
     auto log_file = file_path();
-    strm_ = fopen(log_file.c_str(), "a");  // NOLINT TODO: error check
+    strm_ = fopen(log_file.c_str(), "a");  // NOLINT
+    if (!strm_) {
+        LOG_LP(ERROR) << "I/O error, cannot make file on " <<  location_ << ", errno = " << errno;
+        std::abort();
+    }
     setvbuf(strm_, nullptr, _IOFBF, 1024L * 1024L);  // NOLINT TODO: error check
     if (!registered_) {
         envelope_.add_file(log_file);
@@ -54,7 +58,10 @@ void log_channel::begin_session() noexcept {
 }
 
 void log_channel::end_session() noexcept {
-    fflush(strm_);  // NOLINT TODO: error check
+    if (fflush(strm_) != 0) {
+        LOG_LP(ERROR) << "fflush failed, errno = " << errno;
+        std::abort();
+    }
     if (int rc = fsync(fileno(strm_)); rc != 0) {
         LOG_LP(ERROR) << "fsync failed, errno = " << errno;
         std::abort();
@@ -62,7 +69,10 @@ void log_channel::end_session() noexcept {
     finished_epoch_id_.store(current_epoch_id_.load());
     current_epoch_id_.store(UINT64_MAX);
     envelope_.update_min_epoch_id();
-    fclose(strm_);  // NOLINT TODO: error check
+    if (fclose(strm_) != 0) {  // NOLINT
+        LOG_LP(ERROR) << "fclose failed, errno = " << errno;
+        std::abort();
+    }
 }
 
 void log_channel::abort_session([[maybe_unused]] status status_code, [[maybe_unused]] const std::string& message) noexcept {
