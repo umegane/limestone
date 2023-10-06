@@ -49,7 +49,7 @@ void log_channel::begin_session() noexcept {
         LOG_LP(ERROR) << "I/O error, cannot make file on " <<  location_ << ", errno = " << errno;
         std::abort();
     }
-    setvbuf(strm_, nullptr, _IOFBF, 1024L * 1024L);  // NOLINT TODO: error check
+    setvbuf(strm_, nullptr, _IOFBF, 128L * 1024L);  // NOLINT, NB. glibc may ignore size when _IOFBF and buffer=NULL
     if (!registered_) {
         envelope_.add_file(log_file);
         registered_ = true;
@@ -62,7 +62,7 @@ void log_channel::end_session() noexcept {
         LOG_LP(ERROR) << "fflush failed, errno = " << errno;
         std::abort();
     }
-    if (int rc = fsync(fileno(strm_)); rc != 0) {
+    if (fsync(fileno(strm_)) != 0) {
         LOG_LP(ERROR) << "fsync failed, errno = " << errno;
         std::abort();
     }

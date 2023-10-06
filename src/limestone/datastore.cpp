@@ -156,7 +156,7 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {  // NOLIN
                 LOG_LP(ERROR) << "fflush failed, errno = " << errno;
                 std::abort();
             }
-            if (int rc = fsync(fileno(strm)); rc != 0) {
+            if (fsync(fileno(strm)) != 0) {
                 LOG_LP(ERROR) << "fsync failed, errno = " << errno;
                 std::abort();
             }
