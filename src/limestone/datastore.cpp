@@ -40,7 +40,7 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
             LOG_LP(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
-            throw std::runtime_error("fail to create the log_location directory");  //NOLINT
+            throw std::runtime_error("fail to create the log_location directory");
         }
     } else {
         BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
@@ -55,14 +55,14 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
     epoch_file_path_ = location_ / boost::filesystem::path(std::string(epoch_file_name));
     const bool result = boost::filesystem::exists(epoch_file_path_, error);
     if (!result || error) {
-        FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT
+        FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT(*-owning-memory)
         if (!strm) {
             LOG_LP(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
-            throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
+            throw std::runtime_error("does not have write permission for the log_location directory");
         }
-        if (fclose(strm) != 0) {  // NOLINT
+        if (fclose(strm) != 0) {  // NOLINT(*-owning-memory)
             LOG_LP(ERROR) << "fclose failed, errno = " << errno;
-            throw std::runtime_error("I/O error");  //NOLINT
+            throw std::runtime_error("I/O error");
         }
         add_file(epoch_file_path_);
     }
@@ -146,7 +146,7 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {  // NOLIN
         if (epoch_id_recorded_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
             std::lock_guard<std::mutex> lock(mtx_epoch_file_);
 
-            FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT
+            FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT(*-owning-memory)
             if (!strm) {
                 LOG_LP(ERROR) << "fopen failed, errno = " << errno;
                 std::abort();
@@ -160,7 +160,7 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {  // NOLIN
                 LOG_LP(ERROR) << "fsync failed, errno = " << errno;
                 std::abort();
             }
-            if (fclose(strm) != 0) {  // NOLINT
+            if (fclose(strm) != 0) {  // NOLINT(*-owning-memory)
                 LOG_LP(ERROR) << "fclose failed, errno = " << errno;
                 std::abort();
             }
@@ -342,7 +342,7 @@ void datastore::rotate_epoch_file() {
     strm.open(epoch_file_path_, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
     if(!strm || !strm.is_open() || strm.bad() || strm.fail()){
         LOG_LP(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
-        throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
+        throw std::runtime_error("does not have write permission for the log_location directory");
     }
     strm.close();
 }

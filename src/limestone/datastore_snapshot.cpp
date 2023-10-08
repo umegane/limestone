@@ -77,8 +77,8 @@ epoch_id_type datastore::last_durable_epoch_in_dir() noexcept {
 
 [[maybe_unused]]
 static void store_bswap64_value(void *dest, const void *src) {
-    auto* p64_dest = reinterpret_cast<std::uint64_t*>(dest);  // NOLINT
-    auto* p64_src = reinterpret_cast<const std::uint64_t*>(src);  // NOLINT
+    auto* p64_dest = reinterpret_cast<std::uint64_t*>(dest);  // NOLINT(*-reinterpret-cast)
+    auto* p64_src = reinterpret_cast<const std::uint64_t*>(src);  // NOLINT(*-reinterpret-cast)
     *p64_dest = __bswap_64(*p64_src);
 }
 
@@ -214,7 +214,7 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
 
     boost::filesystem::path snapshot_file = sub_dir / boost::filesystem::path(std::string(snapshot::file_name_));
     VLOG_LP(log_info) << "generating snapshot file: " << snapshot_file;
-    FILE* ostrm = fopen(snapshot_file.c_str(), "w");  // NOLINT
+    FILE* ostrm = fopen(snapshot_file.c_str(), "w");  // NOLINT(*-owning-memory)
     if (!ostrm) {
         LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
         std::abort();
@@ -264,7 +264,7 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         }
     });
 #endif
-    if (fclose(ostrm) != 0) {  // NOLINT
+    if (fclose(ostrm) != 0) {  // NOLINT(*-owning-memory)
         LOG_LP(ERROR) << "cannot close snapshot file (" << snapshot_file << "), errno = " << errno;
         std::abort();
     }

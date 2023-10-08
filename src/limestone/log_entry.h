@@ -92,11 +92,11 @@ public:
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
         std::size_t key_len = key.length();
-        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        assert(key_len <= UINT32_MAX);
         write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
         std::size_t value_len = value.length();
-        assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        assert(value_len <= UINT32_MAX);
         write_uint32le(strm, static_cast<std::uint32_t>(value_len));
 
         write_uint64le(strm, static_cast<std::uint64_t>(storage_id));
@@ -112,11 +112,11 @@ public:
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
         std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
-        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        assert(key_len <= UINT32_MAX);
         write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
         std::size_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
-        assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        assert(value_len <= UINT32_MAX);
         write_uint32le(strm, static_cast<std::uint32_t>(value_len));
 
         write_bytes(strm, key_sid.data(), key_sid.length());
@@ -128,7 +128,7 @@ public:
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
         std::size_t key_len = key.length();
-        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        assert(key_len <= UINT32_MAX);
         write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
         write_uint64le(strm, static_cast<std::uint64_t>(storage_id));
@@ -143,7 +143,7 @@ public:
         write_uint8(strm, static_cast<std::uint8_t>(type));
 
         std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
-        assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        assert(key_len <= UINT32_MAX);
         write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
         write_bytes(strm, key_sid.data(), key_sid.length());
@@ -252,7 +252,7 @@ private:
     }
     static std::uint32_t read_uint32le(std::istream& in) {
         std::uint32_t buf{};
-        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint32_t));  // NOLINT
+        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint32_t));  // NOLINT(*-reinterpret-cast)
         return le32toh(buf);
     }
     static void write_uint64le(FILE* out, const std::uint64_t value) {
@@ -261,7 +261,7 @@ private:
     }
     static std::uint64_t read_uint64le(std::istream& in) {
         std::uint64_t buf{};
-        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint64_t));  // NOLINT
+        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint64_t));  // NOLINT(*-reinterpret-cast)
         return le64toh(buf);
     }
     static void write_bytes(FILE* out, const void* buf, std::size_t len) {

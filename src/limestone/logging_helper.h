@@ -85,8 +85,8 @@ constexpr auto location_prefix(const std::string_view sv) {
 }
 
 template<size_t N, size_t M>
-constexpr auto location_prefix(const char (&prettyname)[N], const char (&funcname)[M]) {  // NOLINT
-    const std::string_view sv = find_fullname(prettyname, funcname);  // NOLINT
+constexpr auto location_prefix(const char (&prettyname)[N], const char (&funcname)[M]) {  // NOLINT(*-avoid-c-arrays)
+    const std::string_view sv = find_fullname(prettyname, funcname);  // NOLINT(*-bounds-array-to-pointer-decay)
     return location_prefix<std::max(N, M)>(sv);
 }
 

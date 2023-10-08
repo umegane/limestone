@@ -44,7 +44,7 @@ void log_channel::begin_session() noexcept {
     } while (current_epoch_id_.load() != envelope_.epoch_id_switched_.load());
 
     auto log_file = file_path();
-    strm_ = fopen(log_file.c_str(), "a");  // NOLINT
+    strm_ = fopen(log_file.c_str(), "a");  // NOLINT(*-owning-memory)
     if (!strm_) {
         LOG_LP(ERROR) << "I/O error, cannot make file on " <<  location_ << ", errno = " << errno;
         std::abort();
@@ -69,7 +69,7 @@ void log_channel::end_session() noexcept {
     finished_epoch_id_.store(current_epoch_id_.load());
     current_epoch_id_.store(UINT64_MAX);
     envelope_.update_min_epoch_id();
-    if (fclose(strm_) != 0) {  // NOLINT
+    if (fclose(strm_) != 0) {  // NOLINT(*-owning-memory)
         LOG_LP(ERROR) << "fclose failed, errno = " << errno;
         std::abort();
     }

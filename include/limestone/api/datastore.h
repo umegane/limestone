@@ -49,7 +49,7 @@ class datastore {
     /**
      * @brief name of a file to record durable epoch
      */
-    static constexpr const std::string_view epoch_file_name = "epoch";  // NOLINT
+    static constexpr const std::string_view epoch_file_name = "epoch";
 
     enum class state : std::int64_t {
         not_ready = 0,
