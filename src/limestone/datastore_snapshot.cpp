@@ -219,7 +219,7 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
         std::abort();
     }
-    setvbuf(ostrm, nullptr, _IOFBF, 1024L * 1024L);  // NOLINT TODO: error check
+    setvbuf(ostrm, nullptr, _IOFBF, 128L * 1024L);  // NOLINT, NB. glibc may ignore size when _IOFBF and buffer=NULL
     static_assert(sizeof(log_entry::entry_type) == 1);
 #if defined SORT_METHOD_PUT_ONLY
     sortdb->each([&ostrm, last_key = std::string{}](std::string_view db_key, std::string_view db_value) mutable {
@@ -264,7 +264,10 @@ void datastore::create_snapshot() noexcept {  // NOLINT(readability-function-cog
         }
     });
 #endif
-    fclose(ostrm);  // NOLINT TODO: error check
+    if (fclose(ostrm) != 0) {  // NOLINT
+        LOG_LP(ERROR) << "cannot close snapshot file (" << snapshot_file << "), errno = " << errno;
+        std::abort();
+    }
 }
 
 } // namespace limestone::api

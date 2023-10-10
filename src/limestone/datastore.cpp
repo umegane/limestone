@@ -60,7 +60,10 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
             LOG_LP(ERROR) << "does not have write permission for the log_location directory, path: " <<  location_;
             throw std::runtime_error("does not have write permission for the log_location directory");  //NOLINT
         }
-        fclose(strm);  // NOLINT TODO: error check
+        if (fclose(strm) != 0) {  // NOLINT
+            LOG_LP(ERROR) << "fclose failed, errno = " << errno;
+            throw std::runtime_error("I/O error");  //NOLINT
+        }
         add_file(epoch_file_path_);
     }
 
@@ -115,7 +118,7 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
     update_min_epoch_id(true);
 }
 
-void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {
+void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {  // NOLINT(readability-function-cognitive-complexity)
     auto upper_limit = epoch_id_switched_.load() - 1;
     epoch_id_type max_finished_epoch = 0;
 
@@ -143,14 +146,24 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {
         if (epoch_id_recorded_.compare_exchange_strong(old_epoch_id, to_be_epoch)) {
             std::lock_guard<std::mutex> lock(mtx_epoch_file_);
 
-            FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT TODO: error check
+            FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT
+            if (!strm) {
+                LOG_LP(ERROR) << "fopen failed, errno = " << errno;
+                std::abort();
+            }
             log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
-            fflush(strm);  // NOLINT TODO: error check
-            if (int rc = fsync(fileno(strm)); rc != 0) {
+            if (fflush(strm) != 0) {
+                LOG_LP(ERROR) << "fflush failed, errno = " << errno;
+                std::abort();
+            }
+            if (fsync(fileno(strm)) != 0) {
                 LOG_LP(ERROR) << "fsync failed, errno = " << errno;
                 std::abort();
             }
-            fclose(strm);  // NOLINT TODO: error check
+            if (fclose(strm) != 0) {  // NOLINT
+                LOG_LP(ERROR) << "fclose failed, errno = " << errno;
+                std::abort();
+            }
             break;
         }
     }

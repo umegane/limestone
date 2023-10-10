@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstdio>
+#include <endian.h>
 #include <istream>
 #include <string>
 #include <string_view>
@@ -23,9 +24,12 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <glog/logging.h>
 
 #include <limestone/api/storage_id_type.h>
 #include <limestone/api/write_version_type.h>
+#include <limestone/logging.h>
+#include "logging_helper.h"
 
 namespace limestone::api {
 
@@ -47,17 +51,17 @@ public:
     static void begin_session(FILE* strm, epoch_id_type epoch) {
         entry_type type = entry_type::marker_begin;
         write_uint8(strm, static_cast<std::uint8_t>(type));
-        write_uint64(strm, static_cast<std::uint64_t>(epoch));
+        write_uint64le(strm, static_cast<std::uint64_t>(epoch));
     }
     static void end_session(FILE* strm, epoch_id_type epoch) {
         entry_type type = entry_type::marker_end;
         write_uint8(strm, static_cast<std::uint8_t>(type));
-        write_uint64(strm, static_cast<std::uint64_t>(epoch));
+        write_uint64le(strm, static_cast<std::uint64_t>(epoch));
     }
     static void durable_epoch(FILE* strm, epoch_id_type epoch) {
         entry_type type = entry_type::marker_durable;
         write_uint8(strm, static_cast<std::uint8_t>(type));
-        write_uint64(strm, static_cast<std::uint64_t>(epoch));
+        write_uint64le(strm, static_cast<std::uint64_t>(epoch));
     }
 
 // for writer (entry)
@@ -89,18 +93,18 @@ public:
 
         std::size_t key_len = key.length();
         assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        write_uint32(strm, static_cast<std::uint32_t>(key_len));
+        write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
         std::size_t value_len = value.length();
         assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        write_uint32(strm, static_cast<std::uint32_t>(value_len));
+        write_uint32le(strm, static_cast<std::uint32_t>(value_len));
 
-        write_uint64(strm, static_cast<std::uint64_t>(storage_id));
-        fwrite(key.data(), static_cast<std::streamsize>(key_len), 1, strm);  // NOLINT TODO: check error
+        write_uint64le(strm, static_cast<std::uint64_t>(storage_id));
+        write_bytes(strm, key.data(), key_len);
 
-        write_uint64(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
-        write_uint64(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
-        fwrite(value.data(), static_cast<std::streamsize>(value_len), 1, strm);  // NOLINT TODO: check error
+        write_uint64le(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
+        write_uint64le(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
+        write_bytes(strm, value.data(), value_len);
     }
 
     static void write(FILE* strm, std::string_view key_sid, std::string_view value_etc) {
@@ -109,14 +113,14 @@ public:
 
         std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
         assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        write_uint32(strm, static_cast<std::uint32_t>(key_len));
+        write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
         std::size_t value_len = value_etc.length() - (sizeof(epoch_id_type) + sizeof(std::uint64_t));
         assert(value_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        write_uint32(strm, static_cast<std::uint32_t>(value_len));
+        write_uint32le(strm, static_cast<std::uint32_t>(value_len));
 
-        fwrite(key_sid.data(), static_cast<std::streamsize>(key_sid.length()), 1, strm);  // NOLINT TODO: check error
-        fwrite(value_etc.data(), static_cast<std::streamsize>(value_etc.length()), 1, strm);  // NOLINT TODO: check error
+        write_bytes(strm, key_sid.data(), key_sid.length());
+        write_bytes(strm, value_etc.data(), value_etc.length());
     }
 
     static void write_remove(FILE* strm, storage_id_type storage_id, std::string_view key, write_version_type write_version) {
@@ -125,13 +129,13 @@ public:
 
         std::size_t key_len = key.length();
         assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        write_uint32(strm, static_cast<std::uint32_t>(key_len));
+        write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
-        write_uint64(strm, static_cast<std::uint64_t>(storage_id));
-        fwrite(key.data(), static_cast<std::streamsize>(key_len), 1, strm);  // NOLINT TODO: check error
+        write_uint64le(strm, static_cast<std::uint64_t>(storage_id));
+        write_bytes(strm, key.data(), key_len);
 
-        write_uint64(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
-        write_uint64(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
+        write_uint64le(strm, static_cast<std::uint64_t>(write_version.epoch_number_));
+        write_uint64le(strm, static_cast<std::uint64_t>(write_version.minor_write_version_));
     }
 
     static void write_remove(FILE* strm, std::string_view key_sid, std::string_view value_etc) {
@@ -140,10 +144,10 @@ public:
 
         std::size_t key_len = key_sid.length() - sizeof(storage_id_type);
         assert(key_len <= UINT32_MAX);  // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        write_uint32(strm, static_cast<std::uint32_t>(key_len));
+        write_uint32le(strm, static_cast<std::uint32_t>(key_len));
 
-        fwrite(key_sid.data(), static_cast<std::streamsize>(key_sid.length()), 1, strm);  // NOLINT TODO: check error
-        fwrite(value_etc.data(), static_cast<std::streamsize>(value_etc.length()), 1, strm);  // NOLINT TODO: check error
+        write_bytes(strm, key_sid.data(), key_sid.length());
+        write_bytes(strm, value_etc.data(), value_etc.length());
     }
 
 // for reader
@@ -157,8 +161,8 @@ public:
         switch(entry_type_) {
         case entry_type::normal_entry:
         {
-            std::size_t key_len = read_uint32(strm);
-            std::size_t value_len = read_uint32(strm);
+            std::size_t key_len = read_uint32le(strm);
+            std::size_t value_len = read_uint32le(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
             strm.read(key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
@@ -168,7 +172,7 @@ public:
         }
         case entry_type::remove_entry:
         {
-            std::size_t key_len = read_uint32(strm);
+            std::size_t key_len = read_uint32le(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
             strm.read(key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
@@ -179,7 +183,7 @@ public:
         case entry_type::marker_begin:
         case entry_type::marker_end:
         case entry_type::marker_durable:
-            epoch_id_ = static_cast<epoch_id_type>(read_uint64(strm));
+            epoch_id_ = static_cast<epoch_id_type>(read_uint64le(strm));
             break;
 
         case entry_type::this_id_is_not_used:
@@ -236,41 +240,37 @@ private:
     char one_char_{};
 
     static void write_uint8(FILE* out, const std::uint8_t value) {
-        fputc(value, out);  // NOLINT TODO: check error
+        int ret = fputc(value, out);
+        if (ret == EOF) {
+            LOG_LP(ERROR) << "fputc failed, errno = " << errno;
+            std::abort();
+        }
     }
-    static void write_uint32(FILE* out, const std::uint32_t value) {
-        fputc(static_cast<int>((value>>0U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>8U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>16U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>24U)&0xFFU), out);  // NOLINT TODO: check error
+    static void write_uint32le(FILE* out, const std::uint32_t value) {
+        std::uint32_t buf = htole32(value);
+        write_bytes(out, &buf, sizeof(std::uint32_t));
     }
-    static std::uint32_t read_uint32(std::istream& in) {
-        std::uint32_t value = (static_cast<std::uint8_t>(in.get())&0xFFU);
-        value |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<8U;
-        value |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<16U;
-        value |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<24U;
-        return value;
+    static std::uint32_t read_uint32le(std::istream& in) {
+        std::uint32_t buf{};
+        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint32_t));  // NOLINT
+        return le32toh(buf);
     }
-    static void write_uint64(FILE* out, const std::uint64_t value) {
-        fputc(static_cast<int>((value>>0U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>8U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>16U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>24U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>32U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>40U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>48U)&0xFFU), out);  // NOLINT TODO: check error
-        fputc(static_cast<int>((value>>56U)&0xFFU), out);  // NOLINT TODO: check error
+    static void write_uint64le(FILE* out, const std::uint64_t value) {
+        std::uint64_t buf = htole64(value);
+        write_bytes(out, &buf, sizeof(std::uint64_t));
     }
-    static std::uint64_t read_uint64(std::istream& in) {
-        std::uint64_t value_l = (static_cast<std::uint8_t>(in.get())&0xFFU);
-        value_l |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<8U;
-        value_l |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<16U;
-        value_l |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<24U;
-        std::uint64_t value_u = (static_cast<std::uint8_t>(in.get())&0xFFU);
-        value_u |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<8U;
-        value_u |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<16U;
-        value_u |= (static_cast<std::uint8_t>(in.get())&0xFFU)<<24U;
-        return ((value_u << 32U) & 0xFFFFFFFF00000000UL) | value_l;
+    static std::uint64_t read_uint64le(std::istream& in) {
+        std::uint64_t buf{};
+        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint64_t));  // NOLINT
+        return le64toh(buf);
+    }
+    static void write_bytes(FILE* out, const void* buf, std::size_t len) {
+        if (len == 0) return;  // nothing to write
+        auto ret = fwrite(buf, len, 1, out);
+        if (ret != 1) {
+            LOG_LP(ERROR) << "fwrite failed, errno = " << errno;
+            std::abort();
+        }
     }
 };
 
