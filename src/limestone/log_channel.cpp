@@ -85,9 +85,9 @@ void log_channel::add_entry(storage_id_type storage_id, std::string_view key, st
     write_version_ = write_version;
 }
 
-void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] std::string_view value, [[maybe_unused]] write_version_type write_version, [[maybe_unused]] const std::vector<large_object_input>& large_objects) noexcept {
+void log_channel::add_entry([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] std::string_view key, [[maybe_unused]] std::string_view value, [[maybe_unused]] write_version_type write_version, [[maybe_unused]] const std::vector<large_object_input>& large_objects) {
     LOG_LP(ERROR) << "not implemented";
-    std::abort();  // FIXME
+    throw std::runtime_error("not implemented");  // FIXME
 };
 
 void log_channel::remove_entry(storage_id_type storage_id, std::string_view key, write_version_type write_version) {
@@ -95,19 +95,19 @@ void log_channel::remove_entry(storage_id_type storage_id, std::string_view key,
     write_version_ = write_version;
 }
 
-void log_channel::add_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {
+void log_channel::add_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) {
     LOG_LP(ERROR) << "not implemented";
-    std::abort();  // FIXME
+    throw std::runtime_error("not implemented");  // FIXME
 }
 
-void log_channel::remove_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {
+void log_channel::remove_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) {
     LOG_LP(ERROR) << "not implemented";
-    std::abort();  // FIXME
+    throw std::runtime_error("not implemented");  // FIXME
 }
 
-void log_channel::truncate_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) noexcept {
+void log_channel::truncate_storage([[maybe_unused]] storage_id_type storage_id, [[maybe_unused]] write_version_type write_version) {
     LOG_LP(ERROR) << "not implemented";
-    std::abort();  // FIXME
+    throw std::runtime_error("not implemented");  // FIXME
 }
 
 boost::filesystem::path log_channel::file_path() const noexcept {
