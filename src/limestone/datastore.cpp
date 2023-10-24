@@ -106,7 +106,7 @@ log_channel& datastore::create_channel(const boost::filesystem::path& location) 
 
 epoch_id_type datastore::last_epoch() const noexcept { return static_cast<epoch_id_type>(epoch_id_informed_.load()); }
 
-void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
+void datastore::switch_epoch(epoch_id_type new_epoch_id) {
     check_after_ready(static_cast<const char*>(__func__));
 
     auto neid = static_cast<std::uint64_t>(new_epoch_id);
@@ -118,7 +118,7 @@ void datastore::switch_epoch(epoch_id_type new_epoch_id) noexcept {
     update_min_epoch_id(true);
 }
 
-void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {  // NOLINT(readability-function-cognitive-complexity)
+void datastore::update_min_epoch_id(bool from_switch_epoch) {  // NOLINT(readability-function-cognitive-complexity)
     auto upper_limit = epoch_id_switched_.load() - 1;
     epoch_id_type max_finished_epoch = 0;
 
@@ -149,20 +149,20 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) noexcept {  // NOLIN
             FILE* strm = fopen(epoch_file_path_.c_str(), "a");  // NOLINT(*-owning-memory)
             if (!strm) {
                 LOG_LP(ERROR) << "fopen failed, errno = " << errno;
-                std::abort();
+                throw std::runtime_error("I/O error");
             }
             log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
             if (fflush(strm) != 0) {
                 LOG_LP(ERROR) << "fflush failed, errno = " << errno;
-                std::abort();
+                throw std::runtime_error("I/O error");
             }
             if (fsync(fileno(strm)) != 0) {
                 LOG_LP(ERROR) << "fsync failed, errno = " << errno;
-                std::abort();
+                throw std::runtime_error("I/O error");
             }
             if (fclose(strm) != 0) {  // NOLINT(*-owning-memory)
                 LOG_LP(ERROR) << "fclose failed, errno = " << errno;
-                std::abort();
+                throw std::runtime_error("I/O error");
             }
             break;
         }
