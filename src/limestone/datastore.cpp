@@ -151,7 +151,7 @@ void datastore::update_min_epoch_id(bool from_switch_epoch) {  // NOLINT(readabi
                 LOG_LP(ERROR) << "fopen failed, errno = " << errno;
                 throw std::runtime_error("I/O error");
             }
-            log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_informed_.load()));
+            log_entry::durable_epoch(strm, static_cast<epoch_id_type>(epoch_id_recorded_.load()));
             if (fflush(strm) != 0) {
                 LOG_LP(ERROR) << "fflush failed, errno = " << errno;
                 throw std::runtime_error("I/O error");
