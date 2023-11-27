@@ -26,4 +26,10 @@ std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& f
 
 epoch_id_type scan_one_pwal_file(const boost::filesystem::path& pwal, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry);
 
+inline constexpr const std::string_view manifest_file_name = "limestone-manifest.json";
+
+void setup_initial_logdir(const boost::filesystem::path& logdir);
+
+void check_logdir_format(const boost::filesystem::path& logdir);
+
 }

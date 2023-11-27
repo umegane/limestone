@@ -26,6 +26,7 @@
 #include "logging_helper.h"
 
 #include <limestone/api/datastore.h>
+#include "internal.h"
 #include "log_entry.h"
 
 namespace limestone::api {
@@ -36,17 +37,29 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
     LOG(INFO) << "/limestone:config:datastore setting log location = " << location_.string();
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
+    boost::filesystem::path manifest_path = boost::filesystem::path(location_) / std::string(internal::manifest_file_name);
     if (!result_check || error) {
         const bool result_mkdir = boost::filesystem::create_directory(location_, error);
         if (!result_mkdir || error) {
             LOG_LP(ERROR) << "fail to create directory: result_mkdir: " << result_mkdir << ", error_code: " << error << ", path: " << location_;
             throw std::runtime_error("fail to create the log_location directory");
         }
+        internal::setup_initial_logdir(location_);
+        add_file(manifest_path);
     } else {
+        int count = 0;
+        // use existing log-dir
         BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
             if (!boost::filesystem::is_directory(p)) {
+                count++;
                 add_file(p);
             }
+        }
+        if (count == 0) {
+            internal::setup_initial_logdir(location_);
+            add_file(manifest_path);
+        } else {
+            internal::check_logdir_format(location_);
         }
     }
 
@@ -273,6 +286,13 @@ std::unique_ptr<backup_detail> datastore::begin_backup(backup_type btype) {  // 
                     // unknown type
                 }
                 break;
+            }
+            case 'l': {
+                if (filename == internal::manifest_file_name) {
+                    entries.emplace_back(ent.string(), dst, true, false);
+                } else {
+                    // unknown type
+                }
             }
             default: {
                 // unknown type
