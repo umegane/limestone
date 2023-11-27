@@ -28,6 +28,7 @@ target_link_libraries(${package_name}
         PRIVATE Boost::container
         PRIVATE glog::glog
         PRIVATE ${sort_lib}
+        PRIVATE nlohmann_json::nlohmann_json
 )
 
 set_compile_options(${package_name})
@@ -49,4 +50,5 @@ target_link_libraries(limestone-impl
         INTERFACE Boost::container
         INTERFACE glog::glog
         INTERFACE ${sort_lib}
+        INTERFACE nlohmann_json::nlohmann_json
 )
