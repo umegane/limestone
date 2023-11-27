@@ -77,12 +77,14 @@ TEST_F(log_channel_test, number_and_backup) {
     auto& backup = datastore_->begin_backup();
     auto files = backup.files();
 
-    EXPECT_EQ(files.size(), 5);
-    EXPECT_EQ(files.at(0).string(), std::string(location) + "/epoch");
-    EXPECT_EQ(files.at(1).string(), std::string(location) + "/pwal_0000");
-    EXPECT_EQ(files.at(2).string(), std::string(location) + "/pwal_0001");
-    EXPECT_EQ(files.at(3).string(), std::string(location) + "/pwal_0002");
-    EXPECT_EQ(files.at(4).string(), std::string(location) + "/pwal_0003");
+    int manifest_file_num = 0;
+    EXPECT_EQ(files.size(), 5 + manifest_file_num);
+    int i = 0;
+    EXPECT_EQ(files.at(i++).string(), std::string(location) + "/epoch");
+    EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0000");
+    EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0001");
+    EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0002");
+    EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0003");
 }
 
 TEST_F(log_channel_test, remove) {

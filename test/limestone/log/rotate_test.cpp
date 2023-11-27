@@ -1,5 +1,4 @@
 
-#include <algorithm>
 #include <sstream>
 #include <limestone/logging.h>
 
@@ -63,13 +62,15 @@ TEST_F(rotate_test, log_is_rotated) { // NOLINT
     channel.end_session();
     datastore_->switch_epoch(43);
 
+    int manifest_file_num = 0;
     {
         auto& backup = datastore_->begin_backup();  // const function
         auto files = backup.files();
 
-        EXPECT_EQ(files.size(), 2);
-        EXPECT_EQ(files.at(0).string(), std::string(location) + "/epoch");
-        EXPECT_EQ(files.at(1).string(), std::string(location) + "/pwal_0000");
+        ASSERT_EQ(files.size(), 2 + manifest_file_num);
+        int i = 0;
+        ASSERT_EQ(files[i++].string(), std::string(location) + "/epoch");
+        ASSERT_EQ(files[i++].string(), std::string(location) + "/pwal_0000");
     }
     // setup done
 
@@ -84,15 +85,17 @@ TEST_F(rotate_test, log_is_rotated) { // NOLINT
         for (auto & e : v) {
             //std::cout << e.source_path() << std::endl;  // print debug
         }
-        EXPECT_EQ(v.size(), 2);
-        EXPECT_TRUE(starts_with(v[0].destination_path().string(), "epoch"));  // relative
-        EXPECT_TRUE(starts_with(v[0].source_path().string(), location));  // absolute
-        //EXPECT_EQ(v[0].is_detached(), false);
-        EXPECT_EQ(v[0].is_mutable(), false);
-        EXPECT_TRUE(starts_with(v[1].destination_path().string(), "pwal"));  // relative
-        EXPECT_TRUE(starts_with(v[1].source_path().string(), location));  // absolute
-        EXPECT_EQ(v[1].is_detached(), false);
-        EXPECT_EQ(v[1].is_mutable(), false);
+        EXPECT_EQ(v.size(), 2 + manifest_file_num);
+        int i = 0;
+        EXPECT_TRUE(starts_with(v[i].destination_path().string(), "epoch"));  // relative
+        EXPECT_TRUE(starts_with(v[i].source_path().string(), location));  // absolute
+        //EXPECT_EQ(v[i].is_detached(), false);
+        EXPECT_EQ(v[i].is_mutable(), false);
+        i++;
+        EXPECT_TRUE(starts_with(v[i].destination_path().string(), "pwal"));  // relative
+        EXPECT_TRUE(starts_with(v[i].source_path().string(), location));  // absolute
+        EXPECT_EQ(v[i].is_detached(), false);
+        EXPECT_EQ(v[i].is_mutable(), false);
     }
 
     {  // log dir check (by using old backup)
@@ -103,10 +106,11 @@ TEST_F(rotate_test, log_is_rotated) { // NOLINT
         });
 
         // not contains active pwal just after rotate
-        EXPECT_EQ(files.size(), 3);
-        EXPECT_EQ(files.at(0).string(), std::string(location) + "/epoch");  // active epoch
-        EXPECT_TRUE(starts_with(files[1].string(), std::string(location) + "/epoch."));  // rotated epoch
-        EXPECT_TRUE(starts_with(files[2].string(), std::string(location) + "/pwal_0000."));  // rotated pwal
+        EXPECT_EQ(files.size(), 3 + manifest_file_num);
+        int i = 0;
+        EXPECT_EQ(files[i++].string(), std::string(location) + "/epoch");  // active epoch
+        EXPECT_TRUE(starts_with(files[i++].string(), std::string(location) + "/epoch."));  // rotated epoch
+        EXPECT_TRUE(starts_with(files[i++].string(), std::string(location) + "/pwal_0000."));  // rotated pwal
     }
 
 }
@@ -167,19 +171,23 @@ TEST_F(rotate_test, inactive_files_are_also_backed_up) { // NOLINT
         for (auto & e : v) {
             //std::cout << e.source_path() << std::endl;  // print debug
         }
-        EXPECT_EQ(v.size(), 3);
-        EXPECT_TRUE(starts_with(v[0].destination_path().string(), "epoch."));  // relative
-        EXPECT_TRUE(starts_with(v[0].source_path().string(), location));  // absolute
-        //EXPECT_EQ(v[0].is_detached(), false);
-        EXPECT_EQ(v[0].is_mutable(), false);
-        EXPECT_TRUE(starts_with(v[1].destination_path().string(), "pwal_0000."));  // relative
-        EXPECT_TRUE(starts_with(v[1].source_path().string(), location));  // absolute
-        EXPECT_EQ(v[1].is_detached(), false);
-        EXPECT_EQ(v[1].is_mutable(), false);
-        EXPECT_TRUE(starts_with(v[2].destination_path().string(), "pwal_0001."));  // relative
-        EXPECT_TRUE(starts_with(v[2].source_path().string(), location));  // absolute
-        EXPECT_EQ(v[2].is_detached(), false);
-        EXPECT_EQ(v[2].is_mutable(), false);
+        int manifest_file_num = 0;
+        EXPECT_EQ(v.size(), 3 + manifest_file_num);
+        int i = 0;
+        EXPECT_TRUE(starts_with(v[i].destination_path().string(), "epoch."));  // relative
+        EXPECT_TRUE(starts_with(v[i].source_path().string(), location));  // absolute
+        //EXPECT_EQ(v[i].is_detached(), false);
+        EXPECT_EQ(v[i].is_mutable(), false);
+        i++;
+        EXPECT_TRUE(starts_with(v[i].destination_path().string(), "pwal_0000."));  // relative
+        EXPECT_TRUE(starts_with(v[i].source_path().string(), location));  // absolute
+        EXPECT_EQ(v[i].is_detached(), false);
+        EXPECT_EQ(v[i].is_mutable(), false);
+        i++;
+        EXPECT_TRUE(starts_with(v[i].destination_path().string(), "pwal_0001."));  // relative
+        EXPECT_TRUE(starts_with(v[i].source_path().string(), location));  // absolute
+        EXPECT_EQ(v[i].is_detached(), false);
+        EXPECT_EQ(v[i].is_mutable(), false);
     }
 
 }
@@ -220,7 +228,8 @@ TEST_F(rotate_test, restore_prusik_all_abs) { // NOLINT
 
     auto& backup = datastore_->begin_backup();  // const function
     auto files = backup.files();
-    EXPECT_EQ(files.size(), 3);
+    int manifest_file_num = 0;
+    EXPECT_EQ(files.size(), 3 + manifest_file_num);
 }
 
 TEST_F(rotate_test, restore_prusik_all_rel) { // NOLINT
@@ -258,7 +267,8 @@ TEST_F(rotate_test, restore_prusik_all_rel) { // NOLINT
 
     auto& backup = datastore_->begin_backup();  // const function
     auto files = backup.files();
-    EXPECT_EQ(files.size(), 3);
+    int manifest_file_num = 0;
+    EXPECT_EQ(files.size(), 3 + manifest_file_num);
 }
 
 TEST_F(rotate_test, get_snapshot_works) { // NOLINT
