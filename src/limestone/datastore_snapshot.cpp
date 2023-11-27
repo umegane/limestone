@@ -98,10 +98,10 @@ static epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_
     epoch_id_type current_epoch{UINT64_MAX};
     epoch_id_type max_epoch_of_file{0};
 
-    boost::filesystem::ifstream istrm;
-    istrm.open(p, std::ios_base::in | std::ios_base::binary);
+    boost::filesystem::fstream strm;
+    strm.open(p, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
     bool skipping = false;  // scanning in the invalidated epoch snippet
-    while (e.read(istrm)) {
+    while (e.read(strm)) {
         switch (e.type()) {
         case log_entry::entry_type::marker_begin: {
             current_epoch = e.epoch_id();
@@ -109,7 +109,12 @@ static epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_
             if (current_epoch <= ld_epoch) {
                 skipping = false;
             } else {
-                // TODO: rewrite type to marker_invalidated_begin
+                auto pos = strm.tellg();
+                strm.seekp(-9, std::ios::cur);  // size of marker_begin entry
+                char buf = static_cast<char>(log_entry::entry_type::marker_invalidated_begin);
+                strm.write(&buf, sizeof(char));
+                strm.flush();
+                strm.seekg(pos, std::ios::beg);  // restore position
                 skipping = true;
             }
             break;
@@ -130,7 +135,7 @@ static epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_
             break;
         }
     }
-    istrm.close();
+    strm.close();
     return max_epoch_of_file;
 }
 

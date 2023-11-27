@@ -160,7 +160,7 @@ public:
     }
 
 // for reader
-    bool read(boost::filesystem::ifstream& strm) {
+    bool read(std::istream& strm) {
         strm.read(&one_char_, sizeof(char));
         entry_type_ = static_cast<entry_type>(one_char_);        
         if (strm.eof()) {
