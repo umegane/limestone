@@ -92,10 +92,11 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
     return std::memcmp(b.data(), a.data(), write_version_size);
 }
 
-static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
+static epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
     VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
     log_entry e;
     epoch_id_type current_epoch{UINT64_MAX};
+    epoch_id_type max_epoch_of_file{0};
 
     boost::filesystem::ifstream istrm;
     istrm.open(p, std::ios_base::in | std::ios_base::binary);
@@ -104,6 +105,7 @@ static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type l
         switch (e.type()) {
         case log_entry::entry_type::marker_begin: {
             current_epoch = e.epoch_id();
+            max_epoch_of_file = std::max(max_epoch_of_file, current_epoch);
             if (current_epoch <= ld_epoch) {
                 skipping = false;
             } else {
@@ -113,6 +115,7 @@ static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type l
             break;
         }
         case log_entry::entry_type::marker_invalidated_begin: {
+            max_epoch_of_file = std::max(max_epoch_of_file, e.epoch_id());
             skipping = true;
             break;
         }
@@ -128,6 +131,7 @@ static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type l
         }
     }
     istrm.close();
+    return max_epoch_of_file;
 }
 
 void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-complexity)
@@ -140,7 +144,6 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
 
     epoch_id_type ld_epoch = last_durable_epoch_in_dir();
     epoch_id_switched_.store(ld_epoch + 1);  // ??
-    epoch_id_informed_.store(ld_epoch);  // for last_epoch()
 
     [[maybe_unused]]
     auto insert_entry_or_update_to_max = [&sortdb](log_entry& e){
@@ -182,9 +185,15 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
     auto add_entry = insert_entry_or_update_to_max;
     bool works_with_multi_thread = false;
 #endif
-    auto process_file = [ld_epoch, &add_entry](const boost::filesystem::path& p) {
+    std::atomic<epoch_id_type> max_appeared_epoch{ld_epoch};
+    auto process_file = [ld_epoch, &add_entry, &max_appeared_epoch](const boost::filesystem::path& p) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            scan_one_pwal_file(p, ld_epoch, add_entry);
+            epoch_id_type max_epoch_of_file = scan_one_pwal_file(p, ld_epoch, add_entry);
+            epoch_id_type t = max_appeared_epoch.load();
+            while (t < max_epoch_of_file
+                   && !max_appeared_epoch.compare_exchange_weak(t, max_epoch_of_file)) {
+                /* nop */
+            }
         }
     };
 
@@ -214,6 +223,7 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
     for (int i = 0; i < num_worker; i++) {
         workers[i].join();
     }
+    epoch_id_informed_.store(max_appeared_epoch);
 
     boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));
     boost::system::error_code error;
