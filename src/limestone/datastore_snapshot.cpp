@@ -92,6 +92,33 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
     return std::memcmp(b.data(), a.data(), write_version_size);
 }
 
+static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
+    VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
+    log_entry e;
+    epoch_id_type current_epoch{UINT64_MAX};
+
+    boost::filesystem::ifstream istrm;
+    istrm.open(p, std::ios_base::in | std::ios_base::binary);
+    while (e.read(istrm)) {
+        switch (e.type()) {
+        case log_entry::entry_type::marker_begin: {
+            current_epoch = e.epoch_id();
+            break;
+        }
+        case log_entry::entry_type::normal_entry:
+        case log_entry::entry_type::remove_entry: {
+            if (current_epoch <= ld_epoch) {
+                add_entry(e);
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    istrm.close();
+}
+
 void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-complexity)
     auto& from_dir = location_;
 #if defined SORT_METHOD_PUT_ONLY
@@ -146,32 +173,7 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
 #endif
     auto process_file = [ld_epoch, &add_entry](const boost::filesystem::path& p) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            VLOG(log_info) << "processing pwal file: " << p.filename().string();
-            log_entry e;
-            epoch_id_type current_epoch{UINT64_MAX};
-
-            boost::filesystem::ifstream istrm;
-            istrm.open(p, std::ios_base::in | std::ios_base::binary);
-            while(e.read(istrm)) {
-                switch(e.type()) {
-                case log_entry::entry_type::marker_begin:
-                {
-                    current_epoch = e.epoch_id();
-                    break;
-                }
-                case log_entry::entry_type::normal_entry:
-                case log_entry::entry_type::remove_entry:
-                {
-                    if (current_epoch <= ld_epoch) {
-                        add_entry(e);
-                    }
-                    break;
-                }
-                default:
-                    break;
-                }
-            }
-            istrm.close();
+            scan_one_pwal_file(p, ld_epoch, add_entry);
         }
     };
 
