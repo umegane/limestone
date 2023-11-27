@@ -44,6 +44,7 @@ public:
         marker_end,
         marker_durable,
         remove_entry,
+        marker_invalidated_begin,
     };
     
     log_entry() = default;
@@ -60,6 +61,11 @@ public:
     }
     static void durable_epoch(FILE* strm, epoch_id_type epoch) {
         entry_type type = entry_type::marker_durable;
+        write_uint8(strm, static_cast<std::uint8_t>(type));
+        write_uint64le(strm, static_cast<std::uint64_t>(epoch));
+    }
+    static void invalidated_begin(FILE* strm, epoch_id_type epoch) {
+        entry_type type = entry_type::marker_invalidated_begin;
         write_uint8(strm, static_cast<std::uint8_t>(type));
         write_uint64le(strm, static_cast<std::uint64_t>(epoch));
     }
@@ -81,6 +87,9 @@ public:
             break;
         case entry_type::marker_durable:
             durable_epoch(strm, epoch_id_);
+            break;
+        case entry_type::marker_invalidated_begin:
+            invalidated_begin(strm, epoch_id_);
             break;
         case entry_type::this_id_is_not_used:
             break;
@@ -183,6 +192,7 @@ public:
         case entry_type::marker_begin:
         case entry_type::marker_end:
         case entry_type::marker_durable:
+        case entry_type::marker_invalidated_begin:
             epoch_id_ = static_cast<epoch_id_type>(read_uint64le(strm));
             break;
 

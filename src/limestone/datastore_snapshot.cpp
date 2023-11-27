@@ -99,15 +99,26 @@ static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type l
 
     boost::filesystem::ifstream istrm;
     istrm.open(p, std::ios_base::in | std::ios_base::binary);
+    bool skipping = false;  // scanning in the invalidated epoch snippet
     while (e.read(istrm)) {
         switch (e.type()) {
         case log_entry::entry_type::marker_begin: {
             current_epoch = e.epoch_id();
+            if (current_epoch <= ld_epoch) {
+                skipping = false;
+            } else {
+                // TODO: rewrite type to marker_invalidated_begin
+                skipping = true;
+            }
+            break;
+        }
+        case log_entry::entry_type::marker_invalidated_begin: {
+            skipping = true;
             break;
         }
         case log_entry::entry_type::normal_entry:
         case log_entry::entry_type::remove_entry: {
-            if (current_epoch <= ld_epoch) {
+            if (!skipping) {
                 add_entry(e);
             }
             break;
