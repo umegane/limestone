@@ -78,4 +78,74 @@ TEST_F(durable_test, last_record_will_ignored) {
     datastore_->shutdown();
 }
 
+TEST_F(durable_test, invalidated_entries_are_never_reused) {
+    using namespace limestone::api;
+
+    datastore_->ready();
+    log_channel& channel = datastore_->create_channel(boost::filesystem::path(location));
+    datastore_->switch_epoch(42);
+    channel.begin_session();
+    channel.add_entry(3, "k1", "v1", {42, 4});
+    channel.add_entry(3, "k2", "v2", {42, 4});
+    channel.end_session();
+    datastore_->switch_epoch(43);
+    channel.begin_session();
+    channel.add_entry(3, "k3", "v3", {43, 4});
+    channel.add_entry(3, "k4", "v4", {43, 4});
+    channel.end_session();
+    // no switch_epoch, broken
+
+    datastore_->shutdown();
+    regen_datastore();
+    // setup done
+
+    datastore_->recover();
+    datastore_->ready();
+    auto snapshot = datastore_->get_snapshot();
+    auto cursor = snapshot->get_cursor();
+    std::map<std::string, std::string> m;
+    while (cursor->next()) {
+        std::string key;
+        std::string value;
+        cursor->key(key);
+        cursor->value(value);
+        m[key] = value;
+    }
+    EXPECT_EQ(m.size(), 2);
+    EXPECT_EQ(m["k1"], "v1");
+    EXPECT_EQ(m["k2"], "v2");
+
+    log_channel& channel2 = datastore_->create_channel(boost::filesystem::path(location));
+    datastore_->switch_epoch(46);
+    channel2.begin_session();
+    channel2.add_entry(3, "k5", "v5", {46, 4});
+    channel2.add_entry(3, "k6", "v6", {46, 4});
+    channel2.end_session();
+    datastore_->switch_epoch(47);
+
+    datastore_->shutdown();
+
+    regen_datastore();
+    // setup done
+
+    datastore_->recover();
+    datastore_->ready();
+    snapshot = datastore_->get_snapshot();
+    cursor = snapshot->get_cursor();
+    m.clear();
+    while (cursor->next()) {
+        std::string key;
+        std::string value;
+        cursor->key(key);
+        cursor->value(value);
+        m[key] = value;
+    }
+    EXPECT_EQ(m.size(), 4);
+    EXPECT_EQ(m["k1"], "v1");
+    EXPECT_EQ(m["k2"], "v2");
+    EXPECT_EQ(m["k5"], "v5");
+    EXPECT_EQ(m["k6"], "v6");
+    datastore_->shutdown();
+}
+
 }  // namespace limestone::testing
