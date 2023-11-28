@@ -101,7 +101,8 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
 #endif
 
     epoch_id_type ld_epoch = last_durable_epoch_in_dir();
-    epoch_id_switched_.store(ld_epoch + 1);
+    epoch_id_switched_.store(ld_epoch + 1);  // ??
+    epoch_id_informed_.store(ld_epoch);  // for last_epoch()
 
     [[maybe_unused]]
     auto insert_entry_or_update_to_max = [&sortdb](log_entry& e){
