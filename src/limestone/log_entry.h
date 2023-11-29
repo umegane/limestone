@@ -197,7 +197,9 @@ public:
             break;
 
         case entry_type::this_id_is_not_used:
-            return false;
+        default:
+            LOG_LP(ERROR) << "this log_entry is broken: unknown type: " << static_cast<int>(entry_type_);
+            throw std::runtime_error("unknown log_entry type");
         }
 
         return true;

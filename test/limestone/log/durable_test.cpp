@@ -211,4 +211,42 @@ TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_trimmed) {
     }, std::exception);
 }
 
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_type0) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::this_id_is_not_used), f);
+        fclose(f);
+    }
+    auto add_entry = [](log_entry&){ /* nop */ };
+
+    EXPECT_THROW({
+        limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_type99) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        // make broken entry
+        fputc(0x99, f);  // undefined entry_type
+        fclose(f);
+    }
+    auto add_entry = [](log_entry&){ /* nop */ };
+
+    EXPECT_THROW({
+        limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    }, std::exception);
+}
+
 }  // namespace limestone::testing
