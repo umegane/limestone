@@ -55,7 +55,7 @@ using namespace limestone::internal;
 constexpr std::size_t write_version_size = sizeof(epoch_id_type) + sizeof(std::uint64_t);
 static_assert(write_version_size == 16);
 
-epoch_id_type datastore::last_durable_epoch_in_dir() noexcept {
+epoch_id_type datastore::last_durable_epoch_in_dir() {
     auto& from_dir = location_;
     // read main epoch file first
     std::optional<epoch_id_type> ld_epoch = last_durable_epoch(from_dir / std::string(epoch_file_name));

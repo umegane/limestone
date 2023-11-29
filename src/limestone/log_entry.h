@@ -174,9 +174,9 @@ public:
             std::size_t value_len = read_uint32le(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
-            strm.read(key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
+            read_bytes(strm, key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
             value_etc_.resize(value_len + sizeof(epoch_id_type) + sizeof(std::uint64_t));
-            strm.read(value_etc_.data(), static_cast<std::streamsize>(value_etc_.length()));
+            read_bytes(strm, value_etc_.data(), static_cast<std::streamsize>(value_etc_.length()));
             break;
         }
         case entry_type::remove_entry:
@@ -184,9 +184,9 @@ public:
             std::size_t key_len = read_uint32le(strm);
 
             key_sid_.resize(key_len + sizeof(storage_id_type));
-            strm.read(key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
+            read_bytes(strm, key_sid_.data(), static_cast<std::streamsize>(key_sid_.length()));
             value_etc_.resize(sizeof(epoch_id_type) + sizeof(std::uint64_t));
-            strm.read(value_etc_.data(), static_cast<std::streamsize>(value_etc_.length()));
+            read_bytes(strm, value_etc_.data(), static_cast<std::streamsize>(value_etc_.length()));
             break;
         }
         case entry_type::marker_begin:
@@ -262,7 +262,7 @@ private:
     }
     static std::uint32_t read_uint32le(std::istream& in) {
         std::uint32_t buf{};
-        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint32_t));  // NOLINT(*-reinterpret-cast)
+        read_bytes(in, &buf, sizeof(std::uint32_t));
         return le32toh(buf);
     }
     static void write_uint64le(FILE* out, const std::uint64_t value) {
@@ -271,7 +271,7 @@ private:
     }
     static std::uint64_t read_uint64le(std::istream& in) {
         std::uint64_t buf{};
-        in.read(reinterpret_cast<char*>(&buf), sizeof(std::uint64_t));  // NOLINT(*-reinterpret-cast)
+        read_bytes(in, &buf, sizeof(std::uint64_t));
         return le64toh(buf);
     }
     static void write_bytes(FILE* out, const void* buf, std::size_t len) {
@@ -280,6 +280,13 @@ private:
         if (ret != 1) {
             LOG_LP(ERROR) << "fwrite failed, errno = " << errno;
             throw std::runtime_error("I/O error");
+        }
+    }
+    static void read_bytes(std::istream& in, void* buf, std::streamsize len) {
+        in.read(reinterpret_cast<char*>(buf), len);  // NOLINT(*-reinterpret-cast)
+        if (in.eof()) {
+            LOG_LP(ERROR) << "this log entry is broken: unexpected EOF";
+            throw std::runtime_error("unexpected EOF");
         }
     }
 };

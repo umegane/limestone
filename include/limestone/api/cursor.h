@@ -49,7 +49,7 @@ public:
      * @attention this function is not thread-safe.
      * @return true if the next entry exists, false otherwise
      */
-    bool next() noexcept;
+    bool next();
 
     /**
      * @brief returns the storage ID of the entry at the current cursor position

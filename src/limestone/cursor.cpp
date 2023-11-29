@@ -34,7 +34,7 @@ cursor::~cursor() noexcept {
     istrm_.close();
 }
 
-bool cursor::next() noexcept {
+bool cursor::next() {
     if (!istrm_.good()) {
         DVLOG_LP(log_trace) << "file stream of the cursor is not good";
         return false;
