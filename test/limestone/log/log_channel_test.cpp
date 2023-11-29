@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 #include <unistd.h>
+#include "internal.h"
 #include "test_root.h"
+
+#define LOGFORMAT_V1
 
 namespace limestone::testing {
 
@@ -77,10 +80,17 @@ TEST_F(log_channel_test, number_and_backup) {
     auto& backup = datastore_->begin_backup();
     auto files = backup.files();
 
+#ifdef LOGFORMAT_V1
+    int manifest_file_num = 1;
+#else
     int manifest_file_num = 0;
+#endif
     EXPECT_EQ(files.size(), 5 + manifest_file_num);
     int i = 0;
     EXPECT_EQ(files.at(i++).string(), std::string(location) + "/epoch");
+#ifdef LOGFORMAT_V1
+    EXPECT_EQ(files.at(i++).string(), std::string(location) + "/" + std::string(limestone::internal::manifest_file_name));
+#endif
     EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0000");
     EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0001");
     EXPECT_EQ(files.at(i++).string(), std::string(location) + "/pwal_0002");
