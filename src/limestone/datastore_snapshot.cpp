@@ -28,13 +28,11 @@
 #include "log_entry.h"
 #include "sortdb_wrapper.h"
 
-namespace limestone::api {
-
-constexpr std::size_t write_version_size = sizeof(epoch_id_type) + sizeof(std::uint64_t);
-static_assert(write_version_size == 16);
+namespace limestone::internal {
+using namespace limestone::api;
 
 // return max epoch in file.
-static std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& file) noexcept {
+std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& file) {
     std::optional<epoch_id_type> rv;
 
     boost::filesystem::ifstream istrm;
@@ -48,6 +46,14 @@ static std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::
     istrm.close();
     return rv;
 }
+
+}
+
+namespace limestone::api {
+using namespace limestone::internal;
+
+constexpr std::size_t write_version_size = sizeof(epoch_id_type) + sizeof(std::uint64_t);
+static_assert(write_version_size == 16);
 
 epoch_id_type datastore::last_durable_epoch_in_dir() noexcept {
     auto& from_dir = location_;
@@ -75,6 +81,11 @@ epoch_id_type datastore::last_durable_epoch_in_dir() noexcept {
     return ld_epoch.value_or(0);  // 0 = minimum epoch
 }
 
+}
+
+namespace limestone::internal {
+using namespace limestone::api;
+
 [[maybe_unused]]
 static void store_bswap64_value(void *dest, const void *src) {
     auto* p64_dest = reinterpret_cast<std::uint64_t*>(dest);  // NOLINT(*-reinterpret-cast)
@@ -92,7 +103,7 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
     return std::memcmp(b.data(), a.data(), write_version_size);
 }
 
-static epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
+epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
     VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
     log_entry e;
     epoch_id_type current_epoch{UINT64_MAX};
@@ -138,6 +149,11 @@ static epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_
     strm.close();
     return max_epoch_of_file;
 }
+
+}
+
+namespace limestone::api {
+using namespace limestone::internal;
 
 void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-complexity)
     auto& from_dir = location_;

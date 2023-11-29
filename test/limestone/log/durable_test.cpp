@@ -6,6 +6,9 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include "internal.h"
+#include "log_entry.h"
+
 #include "test_root.h"
 
 namespace limestone::testing {
@@ -146,6 +149,44 @@ TEST_F(durable_test, invalidated_entries_are_never_reused) {
     EXPECT_EQ(m["k5"], "v5");
     EXPECT_EQ(m["k6"], "v6");
     datastore_->shutdown();
+}
+
+TEST_F(durable_test, ut_scan_one_pwal_file_nondurable_entry) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        log_entry::write(f, 1, "k1", "v1", {42, 1});
+        log_entry::begin_session(f, 43);  // after this entry; not durable
+        log_entry::write(f, 1, "k2", "v2", {43, 1});
+        fclose(f);
+    }
+    std::vector<log_entry> entries;
+    auto add_entry = [&entries](log_entry& e){
+        entries.emplace_back(e);
+    };
+
+    epoch_id_type last_epoch = limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    EXPECT_EQ(last_epoch, 43);
+    EXPECT_EQ(entries.size(), 1);
+    {  // make pwal file for test
+        std::ifstream in;
+        log_entry e;
+        in.open(pwal, std::ios::in | std::ios::binary);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::marker_begin);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::normal_entry);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::marker_invalidated_begin);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::normal_entry);
+        ASSERT_FALSE(e.read(in));
+        in.close();
+    }
 }
 
 }  // namespace limestone::testing
