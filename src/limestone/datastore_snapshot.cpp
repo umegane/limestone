@@ -39,6 +39,10 @@ std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& f
     log_entry e;
     istrm.open(file, std::ios_base::in | std::ios_base::binary);
     while (e.read(istrm)) {
+        if (e.type() != log_entry::entry_type::marker_durable) {
+            LOG_LP(ERROR) << "this epoch file is broken: unexpected log_entry type: " << static_cast<int>(e.type());
+            throw std::runtime_error("unexpected log_entry type for epoch file");
+        }
         if (!rv.has_value() || e.epoch_id() > rv) {
             rv = e.epoch_id();
         }

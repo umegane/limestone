@@ -249,4 +249,76 @@ TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_type99) {
     }, std::exception);
 }
 
+TEST_F(durable_test, ut_last_durable_epoch_normal) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        fclose(f);
+    }
+
+    EXPECT_EQ(limestone::internal::last_durable_epoch(epoch_file), 42);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_broken_trimmed) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::marker_durable), f);
+        fputc(99, f);  // the end of file is missing
+        fclose(f);
+    }
+
+    EXPECT_THROW({
+        limestone::internal::last_durable_epoch(epoch_file);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_broken_entry_type0) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::this_id_is_not_used), f);
+        fclose(f);
+    }
+
+    EXPECT_THROW({
+        limestone::internal::last_durable_epoch(epoch_file);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_broken_entry_type1) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        log_entry::write(f, 1, "k1", "v1", {42, 1});  // wrong: normal entry is never in epoch-file
+        fclose(f);
+    }
+
+    EXPECT_THROW({
+        limestone::internal::last_durable_epoch(epoch_file);
+    }, std::exception);
+}
+
 }  // namespace limestone::testing
