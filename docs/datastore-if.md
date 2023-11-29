@@ -194,9 +194,11 @@
     * overview
       * 永続化に成功した最大の epoch ID を返す
     * note
-      * この操作は、 `datastore::ready()` の実行前後のいずれでも利用可能
+      * この操作は、 `datastore::ready()` の実行前後のいずれでも利用可能 (`LOG-0` を除く)
     * impl
       * 再起動をまたいでも epoch ID を monotonic にするためにデザイン
+    * limit
+      * `LOG-0` - この操作は `ready()` が呼び出された後に行う必要がある
   * `datastore::switch_epoch(epoch_id_type epoch_id)`
     * overview
       * 現在の epoch ID を変更する

@@ -142,6 +142,7 @@ public:
      * @brief provide the largest epoch ID
      * @return the largest epoch ID that has been successfully persisted
      * @note designed to make epoch ID monotonic across reboots
+     * @attention this function should be called after the ready() is called.
      */
     epoch_id_type last_epoch() const noexcept;
 
