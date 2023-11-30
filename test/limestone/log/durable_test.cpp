@@ -6,6 +6,9 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include "internal.h"
+#include "log_entry.h"
+
 #include "test_root.h"
 
 namespace limestone::testing {
@@ -76,6 +79,246 @@ TEST_F(durable_test, last_record_will_ignored) {
     EXPECT_EQ((cursor->value(buf), buf), "v1");
     EXPECT_FALSE(cursor->next());  // only 1 entry
     datastore_->shutdown();
+}
+
+TEST_F(durable_test, invalidated_entries_are_never_reused) {
+    using namespace limestone::api;
+
+    datastore_->ready();
+    log_channel& channel = datastore_->create_channel(boost::filesystem::path(location));
+    datastore_->switch_epoch(42);
+    channel.begin_session();
+    channel.add_entry(3, "k1", "v1", {42, 4});
+    channel.add_entry(3, "k2", "v2", {42, 4});
+    channel.end_session();
+    datastore_->switch_epoch(43);
+    channel.begin_session();
+    channel.add_entry(3, "k3", "v3", {43, 4});
+    channel.add_entry(3, "k4", "v4", {43, 4});
+    channel.end_session();
+    // no switch_epoch, broken
+
+    datastore_->shutdown();
+    regen_datastore();
+    // setup done
+
+    datastore_->recover();
+    datastore_->ready();
+    auto snapshot = datastore_->get_snapshot();
+    auto cursor = snapshot->get_cursor();
+    std::map<std::string, std::string> m;
+    while (cursor->next()) {
+        std::string key;
+        std::string value;
+        cursor->key(key);
+        cursor->value(value);
+        m[key] = value;
+    }
+    EXPECT_EQ(m.size(), 2);
+    EXPECT_EQ(m["k1"], "v1");
+    EXPECT_EQ(m["k2"], "v2");
+
+    log_channel& channel2 = datastore_->create_channel(boost::filesystem::path(location));
+    datastore_->switch_epoch(46);
+    channel2.begin_session();
+    channel2.add_entry(3, "k5", "v5", {46, 4});
+    channel2.add_entry(3, "k6", "v6", {46, 4});
+    channel2.end_session();
+    datastore_->switch_epoch(47);
+
+    datastore_->shutdown();
+
+    regen_datastore();
+    // setup done
+
+    datastore_->recover();
+    datastore_->ready();
+    snapshot = datastore_->get_snapshot();
+    cursor = snapshot->get_cursor();
+    m.clear();
+    while (cursor->next()) {
+        std::string key;
+        std::string value;
+        cursor->key(key);
+        cursor->value(value);
+        m[key] = value;
+    }
+    EXPECT_EQ(m.size(), 4);
+    EXPECT_EQ(m["k1"], "v1");
+    EXPECT_EQ(m["k2"], "v2");
+    EXPECT_EQ(m["k5"], "v5");
+    EXPECT_EQ(m["k6"], "v6");
+    datastore_->shutdown();
+}
+
+TEST_F(durable_test, ut_scan_one_pwal_file_nondurable_entry) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        log_entry::write(f, 1, "k1", "v1", {42, 1});
+        log_entry::begin_session(f, 43);  // after this entry; not durable
+        log_entry::write(f, 1, "k2", "v2", {43, 1});
+        fclose(f);
+    }
+    std::vector<log_entry> entries;
+    auto add_entry = [&entries](log_entry& e){
+        entries.emplace_back(e);
+    };
+
+    epoch_id_type last_epoch = limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    EXPECT_EQ(last_epoch, 43);
+    EXPECT_EQ(entries.size(), 1);
+    {  // make pwal file for test
+        std::ifstream in;
+        log_entry e;
+        in.open(pwal, std::ios::in | std::ios::binary);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::marker_begin);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::normal_entry);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::marker_invalidated_begin);
+        ASSERT_TRUE(e.read(in));
+        EXPECT_EQ(e.type(), log_entry::entry_type::normal_entry);
+        ASSERT_FALSE(e.read(in));
+        in.close();
+    }
+}
+
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_trimmed) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        log_entry::write(f, 1, "k1", "v1", {42, 1});
+        log_entry::begin_session(f, 43);  // after this entry; not durable
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::normal_entry), f);
+        fputc(99, f);  // the end of file is missing
+        fclose(f);
+    }
+    auto add_entry = [](log_entry&){ /* nop */ };
+
+    EXPECT_THROW({
+        limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_type0) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::this_id_is_not_used), f);
+        fclose(f);
+    }
+    auto add_entry = [](log_entry&){ /* nop */ };
+
+    EXPECT_THROW({
+        limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_type99) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        // make broken entry
+        fputc(0x99, f);  // undefined entry_type
+        fclose(f);
+    }
+    auto add_entry = [](log_entry&){ /* nop */ };
+
+    EXPECT_THROW({
+        limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_normal) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        fclose(f);
+    }
+
+    EXPECT_EQ(limestone::internal::last_durable_epoch(epoch_file), 42);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_broken_trimmed) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::marker_durable), f);
+        fputc(99, f);  // the end of file is missing
+        fclose(f);
+    }
+
+    EXPECT_THROW({
+        limestone::internal::last_durable_epoch(epoch_file);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_broken_entry_type0) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::this_id_is_not_used), f);
+        fclose(f);
+    }
+
+    EXPECT_THROW({
+        limestone::internal::last_durable_epoch(epoch_file);
+    }, std::exception);
+}
+
+TEST_F(durable_test, ut_last_durable_epoch_broken_entry_type1) {
+    using namespace limestone::api;
+
+    boost::filesystem::path epoch_file(location);
+    epoch_file /= "epoch";
+    {  // make pwal file for test
+        FILE *f = fopen(epoch_file.c_str(), "w");
+        log_entry::durable_epoch(f, 1);
+        log_entry::durable_epoch(f, 42);
+        log_entry::write(f, 1, "k1", "v1", {42, 1});  // wrong: normal entry is never in epoch-file
+        fclose(f);
+    }
+
+    EXPECT_THROW({
+        limestone::internal::last_durable_epoch(epoch_file);
+    }, std::exception);
 }
 
 }  // namespace limestone::testing

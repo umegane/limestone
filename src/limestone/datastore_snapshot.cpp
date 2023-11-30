@@ -28,19 +28,21 @@
 #include "log_entry.h"
 #include "sortdb_wrapper.h"
 
-namespace limestone::api {
-
-constexpr std::size_t write_version_size = sizeof(epoch_id_type) + sizeof(std::uint64_t);
-static_assert(write_version_size == 16);
+namespace limestone::internal {
+using namespace limestone::api;
 
 // return max epoch in file.
-static std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& file) noexcept {
+std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& file) {
     std::optional<epoch_id_type> rv;
 
     boost::filesystem::ifstream istrm;
     log_entry e;
     istrm.open(file, std::ios_base::in | std::ios_base::binary);
     while (e.read(istrm)) {
+        if (e.type() != log_entry::entry_type::marker_durable) {
+            LOG_LP(ERROR) << "this epoch file is broken: unexpected log_entry type: " << static_cast<int>(e.type());
+            throw std::runtime_error("unexpected log_entry type for epoch file");
+        }
         if (!rv.has_value() || e.epoch_id() > rv) {
             rv = e.epoch_id();
         }
@@ -49,7 +51,15 @@ static std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::
     return rv;
 }
 
-epoch_id_type datastore::last_durable_epoch_in_dir() noexcept {
+}
+
+namespace limestone::api {
+using namespace limestone::internal;
+
+constexpr std::size_t write_version_size = sizeof(epoch_id_type) + sizeof(std::uint64_t);
+static_assert(write_version_size == 16);
+
+epoch_id_type datastore::last_durable_epoch_in_dir() {
     auto& from_dir = location_;
     // read main epoch file first
     std::optional<epoch_id_type> ld_epoch = last_durable_epoch(from_dir / std::string(epoch_file_name));
@@ -75,6 +85,11 @@ epoch_id_type datastore::last_durable_epoch_in_dir() noexcept {
     return ld_epoch.value_or(0);  // 0 = minimum epoch
 }
 
+}
+
+namespace limestone::internal {
+using namespace limestone::api;
+
 [[maybe_unused]]
 static void store_bswap64_value(void *dest, const void *src) {
     auto* p64_dest = reinterpret_cast<std::uint64_t*>(dest);  // NOLINT(*-reinterpret-cast)
@@ -92,22 +107,41 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
     return std::memcmp(b.data(), a.data(), write_version_size);
 }
 
-static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
+epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
     VLOG_LP(log_info) << "processing pwal file: " << p.filename().string();
     log_entry e;
     epoch_id_type current_epoch{UINT64_MAX};
+    epoch_id_type max_epoch_of_file{0};
 
-    boost::filesystem::ifstream istrm;
-    istrm.open(p, std::ios_base::in | std::ios_base::binary);
-    while (e.read(istrm)) {
+    boost::filesystem::fstream strm;
+    strm.open(p, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    bool skipping = false;  // scanning in the invalidated epoch snippet
+    while (e.read(strm)) {
         switch (e.type()) {
         case log_entry::entry_type::marker_begin: {
             current_epoch = e.epoch_id();
+            max_epoch_of_file = std::max(max_epoch_of_file, current_epoch);
+            if (current_epoch <= ld_epoch) {
+                skipping = false;
+            } else {
+                auto pos = strm.tellg();
+                strm.seekp(-9, std::ios::cur);  // size of marker_begin entry
+                char buf = static_cast<char>(log_entry::entry_type::marker_invalidated_begin);
+                strm.write(&buf, sizeof(char));
+                strm.flush();
+                strm.seekg(pos, std::ios::beg);  // restore position
+                skipping = true;
+            }
+            break;
+        }
+        case log_entry::entry_type::marker_invalidated_begin: {
+            max_epoch_of_file = std::max(max_epoch_of_file, e.epoch_id());
+            skipping = true;
             break;
         }
         case log_entry::entry_type::normal_entry:
         case log_entry::entry_type::remove_entry: {
-            if (current_epoch <= ld_epoch) {
+            if (!skipping) {
                 add_entry(e);
             }
             break;
@@ -116,8 +150,14 @@ static void scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type l
             break;
         }
     }
-    istrm.close();
+    strm.close();
+    return max_epoch_of_file;
 }
+
+}
+
+namespace limestone::api {
+using namespace limestone::internal;
 
 void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-complexity)
     auto& from_dir = location_;
@@ -129,7 +169,6 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
 
     epoch_id_type ld_epoch = last_durable_epoch_in_dir();
     epoch_id_switched_.store(ld_epoch + 1);  // ??
-    epoch_id_informed_.store(ld_epoch);  // for last_epoch()
 
     [[maybe_unused]]
     auto insert_entry_or_update_to_max = [&sortdb](log_entry& e){
@@ -171,9 +210,15 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
     auto add_entry = insert_entry_or_update_to_max;
     bool works_with_multi_thread = false;
 #endif
-    auto process_file = [ld_epoch, &add_entry](const boost::filesystem::path& p) {
+    std::atomic<epoch_id_type> max_appeared_epoch{ld_epoch};
+    auto process_file = [ld_epoch, &add_entry, &max_appeared_epoch](const boost::filesystem::path& p) {
         if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            scan_one_pwal_file(p, ld_epoch, add_entry);
+            epoch_id_type max_epoch_of_file = scan_one_pwal_file(p, ld_epoch, add_entry);
+            epoch_id_type t = max_appeared_epoch.load();
+            while (t < max_epoch_of_file
+                   && !max_appeared_epoch.compare_exchange_weak(t, max_epoch_of_file)) {
+                /* nop */
+            }
         }
     };
 
@@ -203,6 +248,7 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
     for (int i = 0; i < num_worker; i++) {
         workers[i].join();
     }
+    epoch_id_informed_.store(max_appeared_epoch);
 
     boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));
     boost::system::error_code error;
