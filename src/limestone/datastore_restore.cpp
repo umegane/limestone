@@ -22,11 +22,21 @@
 
 #include <limestone/api/datastore.h>
 #include <limestone/status.h>
+#include "internal.h"
 
 namespace limestone::api {
 
 status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
     VLOG_LP(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << std::boolalpha << keep_backup;
+    auto from_dir = boost::filesystem::path(std::string(from));
+
+    // log_dir version check
+    boost::filesystem::path manifest_path = from_dir / std::string(internal::manifest_file_name);
+    std::string ver_err;
+    if (!internal::is_supported_version(manifest_path, ver_err)) {  // notfound or invalid or unsupport
+        LOG_LP(ERROR) << ver_err;
+        return status::err_broken_data;
+    }
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
         if(!boost::filesystem::is_directory(p)) {
@@ -39,7 +49,6 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         }
     }
 
-    auto from_dir = boost::filesystem::path(std::string(from));
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         try {
             boost::filesystem::copy_file(p, location_ / p.filename());

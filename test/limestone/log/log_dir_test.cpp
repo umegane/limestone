@@ -104,4 +104,47 @@ TEST_F(log_dir_test, reject_directory_of_different_version) {
     EXPECT_THROW({ limestone::internal::check_logdir_format(location); }, std::exception);
 }
 
+TEST_F(log_dir_test, rotate_old_ok_v1_dir) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
+                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), true), limestone::status::ok);
+}
+
+TEST_F(log_dir_test, rotate_old_rejects_unsupported_data) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
+                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), true), limestone::status::err_broken_data);
+}
+
+TEST_F(log_dir_test, rotate_old_rejects_v0_logdir_missing_manifest) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), true), limestone::status::err_broken_data);
+}
+
 }  // namespace limestone::testing

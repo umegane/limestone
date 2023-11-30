@@ -30,6 +30,8 @@ inline constexpr const std::string_view manifest_file_name = "limestone-manifest
 
 void setup_initial_logdir(const boost::filesystem::path& logdir);
 
+bool is_supported_version(const boost::filesystem::path& manifest_path, std::string& errmsg);
+
 void check_logdir_format(const boost::filesystem::path& logdir);
 
 }
