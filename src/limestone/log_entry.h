@@ -38,13 +38,13 @@ class datastore;
 class log_entry {
 public:
     enum class entry_type : std::uint8_t {
-        this_id_is_not_used,
-        normal_entry,
-        marker_begin,
-        marker_end,
-        marker_durable,
-        remove_entry,
-        marker_invalidated_begin,
+        this_id_is_not_used = 0,
+        normal_entry = 1,
+        marker_begin = 2,
+        marker_end = 3,
+        marker_durable = 4,
+        remove_entry = 5,
+        marker_invalidated_begin = 6,
     };
     
     log_entry() = default;
