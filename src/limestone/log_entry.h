@@ -162,7 +162,7 @@ public:
 // for reader
     bool read(std::istream& strm) {
         strm.read(&one_char_, sizeof(char));
-        entry_type_ = static_cast<entry_type>(one_char_);        
+        entry_type_ = static_cast<entry_type>(one_char_);
         if (strm.eof()) {
             return false;
         }
@@ -196,7 +196,6 @@ public:
             epoch_id_ = static_cast<epoch_id_type>(read_uint64le(strm));
             break;
 
-        case entry_type::this_id_is_not_used:
         default:
             LOG_LP(ERROR) << "this log_entry is broken: unknown type: " << static_cast<int>(entry_type_);
             throw std::runtime_error("unknown log_entry type");
