@@ -147,4 +147,58 @@ TEST_F(log_dir_test, rotate_old_rejects_v0_logdir_missing_manifest) {
     EXPECT_EQ(datastore_->restore(bk_path.string(), true), limestone::status::err_broken_data);
 }
 
+TEST_F(log_dir_test, rotate_prusik_ok_v1_dir) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
+                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    // setup entries
+    std::vector<limestone::api::file_set_entry> entries;
+    entries.emplace_back("epoch", "epoch", false);
+    entries.emplace_back(std::string(limestone::internal::manifest_file_name), std::string(limestone::internal::manifest_file_name), false);
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), entries), limestone::status::ok);
+}
+
+TEST_F(log_dir_test, rotate_prusik_rejects_unsupported_data) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
+                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    // setup entries
+    std::vector<limestone::api::file_set_entry> entries;
+    entries.emplace_back("epoch", "epoch", false);
+    entries.emplace_back(std::string(limestone::internal::manifest_file_name), std::string(limestone::internal::manifest_file_name), false);
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), entries), limestone::status::err_broken_data);
+}
+
+TEST_F(log_dir_test, rotate_prusik_rejects_v0_logdir_missing_manifest) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    // setup entries
+    std::vector<limestone::api::file_set_entry> entries;
+    entries.emplace_back("epoch", "epoch", false);
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), entries), limestone::status::err_broken_data);
+}
+
 }  // namespace limestone::testing
