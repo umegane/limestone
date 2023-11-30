@@ -58,8 +58,6 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
         if (count == 0) {
             internal::setup_initial_logdir(location_);
             add_file(manifest_path);
-        } else {
-            internal::check_logdir_format(location_);
         }
     }
 
@@ -93,6 +91,7 @@ void datastore::recover() const noexcept {
 }
 
 void datastore::ready() noexcept {
+    internal::check_logdir_format(location_);
     create_snapshot();
     state_ = state::ready;
 }
