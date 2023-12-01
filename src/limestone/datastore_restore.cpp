@@ -22,11 +22,21 @@
 
 #include <limestone/api/datastore.h>
 #include <limestone/status.h>
+#include "internal.h"
 
 namespace limestone::api {
 
 status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
     VLOG_LP(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << std::boolalpha << keep_backup;
+    auto from_dir = boost::filesystem::path(std::string(from));
+
+    // log_dir version check
+    boost::filesystem::path manifest_path = from_dir / std::string(internal::manifest_file_name);
+    std::string ver_err;
+    if (!internal::is_supported_version(manifest_path, ver_err)) {  // notfound or invalid or unsupport
+        LOG_LP(ERROR) << ver_err;
+        return status::err_broken_data;
+    }
 
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
         if(!boost::filesystem::is_directory(p)) {
@@ -39,7 +49,6 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         }
     }
 
-    auto from_dir = boost::filesystem::path(std::string(from));
     BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
         try {
             boost::filesystem::copy_file(p, location_ / p.filename());
@@ -65,6 +74,35 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
 // prusik era
 status datastore::restore(std::string_view from, std::vector<file_set_entry>& entries) {
     VLOG_LP(log_debug) << "restore (from prusik) begin, from directory = " << from;
+    auto from_dir = boost::filesystem::path(std::string(from));
+
+    // log_dir version check
+    int manifest_count = 0;
+    for (auto & ent : entries) {
+        if (ent.destination_path().string() != internal::manifest_file_name) {
+            continue;
+        }
+        boost::filesystem::path src{ent.source_path()};
+        if (src.is_absolute()) {
+            // use it
+        } else {
+            src = from_dir / src;
+        }
+        if (!boost::filesystem::exists(src) || !boost::filesystem::is_regular_file(src)) {
+            LOG_LP(ERROR) << "file not found : file = " << src.string();
+            return status::err_not_found;
+        }
+        std::string ver_err;
+        if (!internal::is_supported_version(src, ver_err)) {
+            LOG_LP(ERROR) << ver_err;
+            return status::err_broken_data;
+        }
+        manifest_count++;
+    }
+    if (manifest_count < 1) {  // XXX: change to != 1 ??
+        LOG_LP(ERROR) << "no manifest file in backup";
+        return status::err_broken_data;
+    }
 
     // purge logdir
     // FIXME: copied this code from (old) restore(), fix duplicate
@@ -79,7 +117,6 @@ status datastore::restore(std::string_view from, std::vector<file_set_entry>& en
         }
     }
 
-    auto from_dir = boost::filesystem::path(std::string(from));
     for (auto & ent : entries) {
         boost::filesystem::path src{ent.source_path()};
         boost::filesystem::path dst{ent.destination_path()};

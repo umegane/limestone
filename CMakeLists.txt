@@ -64,7 +64,8 @@ elseif(${RECOVERY_SORTER_KVSLIB_UPPERCASE} STREQUAL "LEVELDB")
 else()
     message(FATAL_ERROR "unsupported RECOVERY_SORTER_KVSLIB value: ${RECOVERY_SORTER_KVSLIB_UPPERCASE}")
 endif()
-      
+find_package(nlohmann_json 3.7.0 REQUIRED)
+
 add_subdirectory(third_party) # should be before enable_testing()
 
 include(GNUInstallDirs)

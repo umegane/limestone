@@ -16,7 +16,7 @@ git submodule update --init --recursive
 ```dockerfile
 FROM ubuntu:22.04
 
-RUN apt update -y && apt install -y git build-essential cmake ninja-build libboost-filesystem-dev libboost-system-dev libboost-container-dev libboost-thread-dev libboost-stacktrace-dev libgoogle-glog-dev libgflags-dev doxygen libleveldb-dev librocksdb-dev pkg-config
+RUN apt update -y && apt install -y git build-essential cmake ninja-build libboost-filesystem-dev libboost-system-dev libboost-container-dev libboost-thread-dev libboost-stacktrace-dev libgoogle-glog-dev libgflags-dev doxygen libleveldb-dev librocksdb-dev pkg-config nlohmann-json3-dev
 # libleveldb-dev is not required if -DRECOVERY_SORTER_KVSLIB=ROCKSDB
 # librocksdb-dev is not required if -DRECOVERY_SORTER_KVSLIB=LEVELDB
 ```
