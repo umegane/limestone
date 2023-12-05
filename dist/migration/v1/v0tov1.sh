@@ -54,21 +54,22 @@ if [ "x$1" = "x-w" ]; then
   check_from_dir "$2"
   check_to_dir "$2"
   [ -w "$2/epoch" ] || error "error: file '$2/epoch' is not writable."
-  echo converting...
+  echo "updating DB_DIR ($2) format from v0 to v1 ..."
   create_or_append_files "$2"
+  echo "done, updated DB_DIR ($2) format to v1."
 else
   check_from_dir "$1"
   if [ -d "$2" ]; then
     check_to_dir "$2"
     check_dir_empty "$2"
+  elif [ -e "$2" ]; then
+    error "error: DEST_DB_DIR '$2' is not directory"
   else
     mkdir -p "$2"
   fi
-  echo converting...
+  echo "creating new v1 DB_DIR ($2) from old v0 DB_DIR ($1) ..."
   cp -p "$1"/pwal* "$2"/
   chmod u+w "$2"/pwal_0??? 2>/dev/null || true
   create_or_append_files "$2"
+  echo "done, created new v1 DB_DIR ($2)."
 fi
-
-echo done
-
