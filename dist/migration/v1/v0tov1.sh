@@ -14,7 +14,8 @@ set -e
 error () { echo "$*" >&2; exit 1; }
 
 check_from_dir () {
-  local dbdir="$1"
+  local dbdir
+  dbdir="$1"
   [ -d "$dbdir" ] || error "error: directory '$dbdir' not found."
   [ -r "$dbdir/epoch" ] \
     || error "error: directory '$dbdir' does not look like DB_DIR."
@@ -46,6 +47,7 @@ EOD
 
 
 [ -n "$2" ] || error "$USAGE"
+[ -z "$3" ] || error "$USAGE"
 
 echo checking...
 
