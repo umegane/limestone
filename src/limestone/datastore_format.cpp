@@ -61,6 +61,9 @@ void setup_initial_logdir(const boost::filesystem::path& logdir) {
     }
 }
 
+static constexpr const char *version_error_prefix = "/:limestone unsupported dbdir format version: "
+    "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/upgrade-guide.md";
+
 bool is_supported_version(const boost::filesystem::path& manifest_path, std::string& errmsg) {
     std::ifstream istrm(manifest_path.string());
     if (!istrm) {
@@ -71,12 +74,17 @@ bool is_supported_version(const boost::filesystem::path& manifest_path, std::str
     try {
         istrm >> manifest;
         auto version = manifest["persistent_format_version"];
-        if (!version.is_number_integer() || version != 1) {
-            errmsg = "format version mismatch: version = " + version.dump();
+        if (version.is_number_integer()) {
+            if (version == 1) {
+                return true;  // supported
+            }
+            errmsg = "format version mismatch: version " + version.dump();
             return false;
         }
+        errmsg = "invalid manifest file, invalid persistent_format_version: " + version.dump();
+        return false;
     } catch (nlohmann::json::exception& e) {
-        errmsg = "JSON read error: ";
+        errmsg = "invalid manifest file, JSON parse error: ";
         errmsg.append(e.what());
         return false;
     };
@@ -86,12 +94,13 @@ bool is_supported_version(const boost::filesystem::path& manifest_path, std::str
 void check_logdir_format(const boost::filesystem::path& logdir) {
     boost::filesystem::path manifest_path = logdir / std::string(manifest_file_name);
     if (!boost::filesystem::exists(manifest_path)) {
-        LOG_LP(ERROR) << "no config file in logdir, maybe v0";
+        LOG_LP(INFO) << "no manifest file in logdir, maybe v0";
+        LOG(ERROR) << version_error_prefix << " (format version mismatch: version 0)";
         throw std::runtime_error("logdir version mismatch");
     }
     std::string errmsg;
     if (!is_supported_version(manifest_path, errmsg)) {
-        LOG_LP(ERROR) << errmsg;
+        LOG(ERROR) << version_error_prefix << " (" << errmsg << ")";
         throw std::runtime_error("logdir version mismatch");
     }
 }

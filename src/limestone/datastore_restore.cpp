@@ -26,15 +26,23 @@
 
 namespace limestone::api {
 
+static constexpr const char *version_error_prefix = "/:limestone unsupported backup format version: "
+    "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/upgrade-guide.md";
+
 status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
     VLOG_LP(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << std::boolalpha << keep_backup;
     auto from_dir = boost::filesystem::path(std::string(from));
 
     // log_dir version check
     boost::filesystem::path manifest_path = from_dir / std::string(internal::manifest_file_name);
+    if (!boost::filesystem::exists(manifest_path)) {
+        LOG_LP(INFO) << "no manifest file in backup";
+        LOG(ERROR) << version_error_prefix << " (format version mismatch: version 0)";
+        return status::err_broken_data;
+    }
     std::string ver_err;
     if (!internal::is_supported_version(manifest_path, ver_err)) {  // notfound or invalid or unsupport
-        LOG_LP(ERROR) << ver_err;
+        LOG(ERROR) << version_error_prefix << " (" << ver_err << ")";
         return status::err_broken_data;
     }
 
@@ -94,13 +102,14 @@ status datastore::restore(std::string_view from, std::vector<file_set_entry>& en
         }
         std::string ver_err;
         if (!internal::is_supported_version(src, ver_err)) {
-            LOG_LP(ERROR) << ver_err;
+            LOG(ERROR) << version_error_prefix << " (" << ver_err << ")";
             return status::err_broken_data;
         }
         manifest_count++;
     }
     if (manifest_count < 1) {  // XXX: change to != 1 ??
-        LOG_LP(ERROR) << "no manifest file in backup";
+        LOG_LP(INFO) << "no manifest file in backup";
+        LOG(ERROR) << version_error_prefix << " (format version mismatch: version 0)";
         return status::err_broken_data;
     }
 
