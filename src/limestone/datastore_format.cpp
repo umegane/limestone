@@ -61,14 +61,14 @@ void setup_initial_logdir(const boost::filesystem::path& logdir) {
     }
 }
 
-static constexpr const char *version_error_prefix = "/:limestone unsupported dbdir format version: "
+static constexpr const char *version_error_prefix = "/:limestone unsupported dbdir persistent format version: "
     "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/upgrade-guide.md";
 
-bool is_supported_version(const boost::filesystem::path& manifest_path, std::string& errmsg) {
+int is_supported_version(const boost::filesystem::path& manifest_path, std::string& errmsg) {
     std::ifstream istrm(manifest_path.string());
     if (!istrm) {
         errmsg = "cannot open for read " + manifest_path.string();
-        return false;
+        return 0;
     }
     nlohmann::json manifest;
     try {
@@ -76,32 +76,37 @@ bool is_supported_version(const boost::filesystem::path& manifest_path, std::str
         auto version = manifest["persistent_format_version"];
         if (version.is_number_integer()) {
             if (version == 1) {
-                return true;  // supported
+                return 1;  // supported
             }
-            errmsg = "format version mismatch: version " + version.dump();
-            return false;
+            errmsg = "version mismatch: version " + version.dump() + ", server supports version 1";
+            return 0;
         }
         errmsg = "invalid manifest file, invalid persistent_format_version: " + version.dump();
-        return false;
+        return -1;
     } catch (nlohmann::json::exception& e) {
         errmsg = "invalid manifest file, JSON parse error: ";
         errmsg.append(e.what());
-        return false;
+        return -1;
     };
-    return true;
 }
 
 void check_logdir_format(const boost::filesystem::path& logdir) {
     boost::filesystem::path manifest_path = logdir / std::string(manifest_file_name);
     if (!boost::filesystem::exists(manifest_path)) {
-        LOG_LP(INFO) << "no manifest file in logdir, maybe v0";
-        LOG(ERROR) << version_error_prefix << " (format version mismatch: version 0)";
+        VLOG_LP(log_info) << "no manifest file in logdir, maybe v0";
+        LOG(ERROR) << version_error_prefix << " (version mismatch: version 0, server supports version 1)";
         throw std::runtime_error("logdir version mismatch");
     }
     std::string errmsg;
-    if (!is_supported_version(manifest_path, errmsg)) {
+    int vc = is_supported_version(manifest_path, errmsg);
+    if (vc == 0) {
         LOG(ERROR) << version_error_prefix << " (" << errmsg << ")";
         throw std::runtime_error("logdir version mismatch");
+    }
+    if (vc < 0) {
+        VLOG_LP(log_info) << errmsg;
+        LOG(ERROR) << "/:limestone dbdir is corrupted, can not use.";
+        throw std::runtime_error("logdir corrupted");
     }
 }
 

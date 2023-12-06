@@ -97,8 +97,7 @@ TEST_F(log_dir_test, accept_directory_only_correct_manifest_file) {
 }
 
 TEST_F(log_dir_test, reject_directory_of_different_version) {
-    create_file(boost::filesystem::path(location) / std::string(limestone::internal::manifest_file_name),
-                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 222 }");
+    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 222 }");
 
     gen_datastore();
     EXPECT_THROW({ limestone::internal::check_logdir_format(location); }, std::exception);
@@ -141,6 +140,21 @@ TEST_F(log_dir_test, rotate_old_rejects_v0_logdir_missing_manifest) {
         LOG(FATAL) << "cannot make directory";
     }
     create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), true), limestone::status::err_broken_data);
+}
+
+TEST_F(log_dir_test, rotate_old_rejects_corrupted_dir) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
+                "{ \"answer\": 42 }");
 
     gen_datastore();
 
@@ -195,6 +209,25 @@ TEST_F(log_dir_test, rotate_prusik_rejects_v0_logdir_missing_manifest) {
     // setup entries
     std::vector<limestone::api::file_set_entry> entries;
     entries.emplace_back("epoch", "epoch", false);
+
+    gen_datastore();
+
+    EXPECT_EQ(datastore_->restore(bk_path.string(), entries), limestone::status::err_broken_data);
+}
+
+TEST_F(log_dir_test, rotate_prusik_rejects_corrupted_dir) {
+    // setup backups
+    boost::filesystem::path bk_path = boost::filesystem::path(location) / "bk";
+    if (!boost::filesystem::create_directory(bk_path)) {
+        LOG(FATAL) << "cannot make directory";
+    }
+    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
+                "{ \"answer\": 42 }");
+    // setup entries
+    std::vector<limestone::api::file_set_entry> entries;
+    entries.emplace_back("epoch", "epoch", false);
+    entries.emplace_back(std::string(limestone::internal::manifest_file_name), std::string(limestone::internal::manifest_file_name), false);
 
     gen_datastore();
 
