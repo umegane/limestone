@@ -113,7 +113,7 @@ public:
      * @details after this method is called, create_channel() can be invoked.
      * @attention this function is not thread-safe, and the from directory must not contain any files other than log files.
      */
-    void ready() noexcept;
+    void ready();
 
     /**
      * @brief provides a pointer of the snapshot object

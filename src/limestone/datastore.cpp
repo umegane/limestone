@@ -90,7 +90,7 @@ void datastore::recover() const noexcept {
     check_before_ready(static_cast<const char*>(__func__));
 }
 
-void datastore::ready() noexcept {
+void datastore::ready() {
     internal::check_logdir_format(location_);
     create_snapshot();
     state_ = state::ready;
