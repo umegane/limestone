@@ -154,12 +154,50 @@ epoch_id_type scan_one_pwal_file(const boost::filesystem::path& p, epoch_id_type
     return max_epoch_of_file;
 }
 
+epoch_id_type scan_pwal_files_in_dir(const boost::filesystem::path& from_dir, int num_worker,
+                                     const std::function<bool(const boost::filesystem::path&)>& is_wal,
+                                     epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry) {
+    std::atomic<epoch_id_type> max_appeared_epoch{ld_epoch};
+    auto process_file = [&](const boost::filesystem::path& p) {
+        if (is_wal(p)) {
+            epoch_id_type max_epoch_of_file = scan_one_pwal_file(p, ld_epoch, add_entry);
+            epoch_id_type t = max_appeared_epoch.load();
+            while (t < max_epoch_of_file
+                   && !max_appeared_epoch.compare_exchange_weak(t, max_epoch_of_file)) {
+                /* nop */
+            }
+        }
+    };
+    std::mutex dir_mtx;
+    auto dir_begin = boost::filesystem::directory_iterator(from_dir);
+    auto dir_end = boost::filesystem::directory_iterator();
+    std::vector<std::thread> workers;
+    workers.reserve(num_worker);
+    for (int i = 0; i < num_worker; i++) {
+        workers.emplace_back(std::thread([&dir_mtx, &dir_begin, &dir_end, &process_file](){
+            for (;;) {
+                boost::filesystem::path p;
+                {
+                    std::lock_guard<std::mutex> g{dir_mtx};
+                    if (dir_begin == dir_end) break;
+                    p = *dir_begin++;
+                }
+                process_file(p);
+            }
+        }));
+    }
+    for (int i = 0; i < num_worker; i++) {
+        workers[i].join();
+    }
+    return max_appeared_epoch;
+}
+
 }
 
 namespace limestone::api {
 using namespace limestone::internal;
 
-void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-complexity)
+void datastore::create_snapshot() {
     auto& from_dir = location_;
 #if defined SORT_METHOD_PUT_ONLY
     auto sortdb = std::make_unique<sortdb_wrapper>(from_dir, comp_twisted_key);
@@ -210,44 +248,14 @@ void datastore::create_snapshot() {  // NOLINT(readability-function-cognitive-co
     auto add_entry = insert_entry_or_update_to_max;
     bool works_with_multi_thread = false;
 #endif
-    std::atomic<epoch_id_type> max_appeared_epoch{ld_epoch};
-    auto process_file = [ld_epoch, &add_entry, &max_appeared_epoch](const boost::filesystem::path& p) {
-        if (p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix) {
-            epoch_id_type max_epoch_of_file = scan_one_pwal_file(p, ld_epoch, add_entry);
-            epoch_id_type t = max_appeared_epoch.load();
-            while (t < max_epoch_of_file
-                   && !max_appeared_epoch.compare_exchange_weak(t, max_epoch_of_file)) {
-                /* nop */
-            }
-        }
-    };
 
     int num_worker = recover_max_parallelism_;
     if (!works_with_multi_thread && num_worker > 1) {
         LOG(INFO) << "/limestone:config:datastore this sort method does not work correctly with multi-thread, so force the number of recover process thread = 1";
         num_worker = 1;
     }
-    std::mutex dir_mtx;
-    auto dir_begin = boost::filesystem::directory_iterator(from_dir);
-    auto dir_end = boost::filesystem::directory_iterator();
-    std::vector<std::thread> workers;
-    workers.reserve(num_worker);
-    for (int i = 0; i < num_worker; i++) {
-        workers.emplace_back(std::thread([&dir_mtx, &dir_begin, &dir_end, &process_file](){
-            for (;;) {
-                boost::filesystem::path p;
-                {
-                    std::lock_guard<std::mutex> g{dir_mtx};
-                    if (dir_begin == dir_end) break;
-                    p = *dir_begin++;
-                }
-                process_file(p);
-            }
-        }));
-    }
-    for (int i = 0; i < num_worker; i++) {
-        workers[i].join();
-    }
+    auto is_wal = [](const boost::filesystem::path& p){ return p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix; };
+    epoch_id_type max_appeared_epoch = scan_pwal_files_in_dir(from_dir, num_worker, is_wal, ld_epoch, add_entry);
     epoch_id_informed_.store(max_appeared_epoch);
 
     boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));

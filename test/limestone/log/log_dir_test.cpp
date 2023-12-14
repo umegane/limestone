@@ -41,7 +41,9 @@ static_assert(epoch_0_str.length() == 9);
         boost::filesystem::remove_all(location);
     }
 
-    bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; }
+    static bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; }
+    static bool is_pwal(const boost::filesystem::path& p) { return starts_with(p.filename().string(), "pwal"); }
+    static void ignore_entry(limestone::api::log_entry&) {}
 
 protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
@@ -236,6 +238,64 @@ TEST_F(log_dir_test, rotate_prusik_rejects_corrupted_dir) {
     gen_datastore();
 
     EXPECT_EQ(datastore_->restore(bk_path.string(), entries), limestone::status::err_broken_data);
+}
+
+TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_normal) {
+    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
+    create_file(boost::filesystem::path(location) / "pwal_0000",
+                "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
+                // XXX: epoch footer...
+                "\x02\x00\x01\x00\x00\x00\x00\x00\x00"
+                // XXX: epoch footer...
+                ""sv);
+
+    gen_datastore();
+    EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x100);
+}
+
+TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
+    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
+    create_file(boost::filesystem::path(location) / "pwal_0000",
+                "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
+                // XXX: epoch footer...
+                "\x02\x01\x01\x00\x00\x00\x00\x00\x00"
+                // XXX: epoch footer...
+                ""sv);
+
+    gen_datastore();
+    EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x101);
+}
+
+TEST_F(log_dir_test, DISABLED_scan_pwal_files_in_dir_rejects_unexpected_EOF) {
+    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
+    create_file(boost::filesystem::path(location) / "pwal_0000",
+                "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
+                // XXX: epoch footer...
+                "\x02\x01\x01\x00\x00\x00"
+                ""sv);
+
+    gen_datastore();
+    EXPECT_THROW({
+        limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry);
+    }, std::exception);
+}
+
+TEST_F(log_dir_test, DISABLED_scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
+    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
+    create_file(boost::filesystem::path(location) / "pwal_0000",
+                "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
+                // XXX: epoch footer...
+                "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                ""sv);
+
+    gen_datastore();
+    EXPECT_THROW({
+        limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry);
+    }, std::exception);
 }
 
 }  // namespace limestone::testing
