@@ -40,7 +40,7 @@ static constexpr const char* location = "/tmp/durable_test";
         boost::filesystem::remove_all(location);
     }
 
-    bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; };
+    bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; }
 
 protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};

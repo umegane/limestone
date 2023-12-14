@@ -87,7 +87,7 @@ int is_supported_version(const boost::filesystem::path& manifest_path, std::stri
         errmsg = "invalid manifest file, JSON parse error: ";
         errmsg.append(e.what());
         return -1;
-    };
+    }
 }
 
 void check_logdir_format(const boost::filesystem::path& logdir) {

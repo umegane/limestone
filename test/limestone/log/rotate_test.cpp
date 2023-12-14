@@ -43,7 +43,7 @@ public:
         boost::filesystem::remove_all(location);
     }
 
-    bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; };
+    bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; }
 
 protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
@@ -152,7 +152,7 @@ TEST_F(rotate_test, inactive_files_are_also_backed_up) { // NOLINT
     // f. rotate and backup
     //    CHECK: are all files in the backup target??
     // g. server shutdown
-    // h, restore files from 6.
+    // h. restore files from f.
     //    DATA LOST if step f. is wrong
 
     {
