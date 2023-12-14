@@ -9,12 +9,16 @@
 
 #include "test_root.h"
 
+using namespace std::literals;
+
 namespace limestone::testing {
 
 class log_dir_test : public ::testing::Test {
 public:
 static constexpr const char* location = "/tmp/log_dir_test";
 const boost::filesystem::path manifest_path = boost::filesystem::path(location) / std::string(limestone::internal::manifest_file_name);
+static constexpr const std::string_view epoch_0_str = "\x04\x00\x00\x00\x00\x00\x00\x00\x00"sv;
+static_assert(epoch_0_str.length() == 9);
 
     void SetUp() {
         boost::filesystem::remove_all(location);
@@ -53,14 +57,14 @@ TEST_F(log_dir_test, newly_created_directory_contains_manifest_file) {
 }
 
 TEST_F(log_dir_test, reject_directory_without_manifest_file) {
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0_str);
 
     gen_datastore();
     EXPECT_THROW({ limestone::internal::check_logdir_format(location); }, std::exception);
 }
 
 TEST_F(log_dir_test, reject_directory_with_broken_manifest_file) {
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0_str);
     create_file(manifest_path, "broken");
 
     gen_datastore();
@@ -82,7 +86,7 @@ TEST_F(log_dir_test, reject_directory_only_broken_manifest_file2) {
 }
 
 TEST_F(log_dir_test, accept_directory_with_correct_manifest_file) {
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0_str);
     create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
 
     gen_datastore();
@@ -109,7 +113,7 @@ TEST_F(log_dir_test, rotate_old_ok_v1_dir) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     create_file(bk_path / std::string(limestone::internal::manifest_file_name),
                 "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
 
@@ -124,7 +128,7 @@ TEST_F(log_dir_test, rotate_old_rejects_unsupported_data) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     create_file(bk_path / std::string(limestone::internal::manifest_file_name),
                 "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
 
@@ -139,7 +143,7 @@ TEST_F(log_dir_test, rotate_old_rejects_v0_logdir_missing_manifest) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
 
     gen_datastore();
 
@@ -152,7 +156,7 @@ TEST_F(log_dir_test, rotate_old_rejects_corrupted_dir) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     create_file(bk_path / std::string(limestone::internal::manifest_file_name),
                 "{ \"answer\": 42 }");
 
@@ -167,7 +171,7 @@ TEST_F(log_dir_test, rotate_prusik_ok_v1_dir) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     create_file(bk_path / std::string(limestone::internal::manifest_file_name),
                 "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
     // setup entries
@@ -186,7 +190,7 @@ TEST_F(log_dir_test, rotate_prusik_rejects_unsupported_data) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     create_file(bk_path / std::string(limestone::internal::manifest_file_name),
                 "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
     // setup entries
@@ -205,7 +209,7 @@ TEST_F(log_dir_test, rotate_prusik_rejects_v0_logdir_missing_manifest) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     // setup entries
     std::vector<limestone::api::file_set_entry> entries;
     entries.emplace_back("epoch", "epoch", false);
@@ -221,7 +225,7 @@ TEST_F(log_dir_test, rotate_prusik_rejects_corrupted_dir) {
     if (!boost::filesystem::create_directory(bk_path)) {
         LOG(FATAL) << "cannot make directory";
     }
-    create_file(bk_path / "epoch", "\x04\x00\x00\x00\x00\x00\x00\x00\x00");
+    create_file(bk_path / "epoch", epoch_0_str);
     create_file(bk_path / std::string(limestone::internal::manifest_file_name),
                 "{ \"answer\": 42 }");
     // setup entries
