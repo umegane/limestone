@@ -268,7 +268,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
     EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x101);
 }
 
-TEST_F(log_dir_test, DISABLED_scan_pwal_files_in_dir_rejects_unexpected_EOF) {
+TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
     create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
     create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
@@ -283,7 +283,7 @@ TEST_F(log_dir_test, DISABLED_scan_pwal_files_in_dir_rejects_unexpected_EOF) {
     }, std::exception);
 }
 
-TEST_F(log_dir_test, DISABLED_scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
+TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
     create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
     create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",

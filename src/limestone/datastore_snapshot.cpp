@@ -172,9 +172,11 @@ epoch_id_type scan_pwal_files_in_dir(const boost::filesystem::path& from_dir, in
     auto dir_begin = boost::filesystem::directory_iterator(from_dir);
     auto dir_end = boost::filesystem::directory_iterator();
     std::vector<std::thread> workers;
+    std::mutex ex_mtx;
+    std::exception_ptr ex_ptr{};
     workers.reserve(num_worker);
     for (int i = 0; i < num_worker; i++) {
-        workers.emplace_back(std::thread([&dir_mtx, &dir_begin, &dir_end, &process_file](){
+        workers.emplace_back(std::thread([&](){
             for (;;) {
                 boost::filesystem::path p;
                 {
@@ -182,12 +184,26 @@ epoch_id_type scan_pwal_files_in_dir(const boost::filesystem::path& from_dir, in
                     if (dir_begin == dir_end) break;
                     p = *dir_begin++;
                 }
-                process_file(p);
+                try {
+                    process_file(p);
+                } catch (std::runtime_error& ex) {
+                    VLOG(log_info) << "/:limestone catch runtime_error(" << ex.what() << ")";
+                    std::lock_guard<std::mutex> g2{ex_mtx};
+                    if (!ex_ptr) {  // only save one
+                        ex_ptr = std::current_exception();
+                    }
+                    std::lock_guard<std::mutex> g{dir_mtx};
+                    dir_begin = dir_end;  // skip all unprocessed files
+                    break;
+                }
             }
         }));
     }
     for (int i = 0; i < num_worker; i++) {
         workers[i].join();
+    }
+    if (ex_ptr) {
+        std::rethrow_exception(ex_ptr);
     }
     return max_appeared_epoch;
 }
