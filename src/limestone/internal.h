@@ -21,6 +21,8 @@
 namespace limestone::internal {
 using namespace limestone::api;
 
+// from datastore_snapshot.cpp
+
 // return max epoch in file.
 std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& file);
 
@@ -33,6 +35,8 @@ epoch_id_type scan_pwal_files_in_dir(const boost::filesystem::path& from_dir, in
                                      const std::function<bool(const boost::filesystem::path&)>& is_wal,
                                      epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry);
 
+// from datastore_format.cpp
+
 inline constexpr const std::string_view manifest_file_name = "limestone-manifest.json";
 
 void setup_initial_logdir(const boost::filesystem::path& logdir);
@@ -43,5 +47,9 @@ void setup_initial_logdir(const boost::filesystem::path& logdir);
 int is_supported_version(const boost::filesystem::path& manifest_path, std::string& errmsg);
 
 void check_logdir_format(const boost::filesystem::path& logdir);
+
+// from datastore_restore.cpp
+
+status purge_dir(const boost::filesystem::path& dir);
 
 }

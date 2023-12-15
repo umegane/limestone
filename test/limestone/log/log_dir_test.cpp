@@ -298,4 +298,16 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
     }, std::exception);
 }
 
+TEST_F(log_dir_test, ut_purge_dir_ok_file1) {
+    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    ASSERT_FALSE(boost::filesystem::is_empty(location));
+
+    ASSERT_EQ(internal::purge_dir(location), status::ok);
+    ASSERT_TRUE(boost::filesystem::is_empty(location));
+}
+
+/* check purge_dir returns err_permission_error: unimplemented.
+   because creating the file that cannnot be deleted by test user requires super-user privileges or similar */
+//TEST_F(log_dir_test, ut_purge_dir_err_file1) {}
+
 }  // namespace limestone::testing

@@ -23,6 +23,24 @@
 #include <limestone/status.h>
 #include "internal.h"
 
+namespace limestone::internal {
+
+status purge_dir(const boost::filesystem::path& dir) {
+    for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(dir)) {
+        if (!boost::filesystem::is_directory(p)) {
+            try {
+                boost::filesystem::remove(p);
+            } catch (boost::filesystem::filesystem_error& ex) {
+                LOG_LP(ERROR) << ex.what() << " file = " << p.string();
+                return status::err_permission_error;
+            }
+        }
+    }
+    return status::ok;
+}
+
+}  // namespace limestone::internal
+
 namespace limestone::api {
 
 static constexpr const char *version_error_prefix = "/:limestone unsupported backup persistent format version: "
@@ -51,16 +69,7 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         return status::err_broken_data;
     }
 
-    for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(location_)) {
-        if(!boost::filesystem::is_directory(p)) {
-            try {
-                boost::filesystem::remove(p);
-            } catch (boost::filesystem::filesystem_error& ex) {
-                LOG_LP(ERROR) << ex.what() << " file = " << p.string();
-                return status::err_permission_error;
-            }
-        }
-    }
+    if (auto rc = internal::purge_dir(location_); rc != status::ok) { return rc; }
 
     for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(from_dir)) {
         try {
@@ -124,18 +133,7 @@ status datastore::restore(std::string_view from, std::vector<file_set_entry>& en
         return status::err_broken_data;
     }
 
-    // purge logdir
-    // FIXME: copied this code from (old) restore(), fix duplicate
-    for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(location_)) {
-        if(!boost::filesystem::is_directory(p)) {
-            try {
-                boost::filesystem::remove(p);
-            } catch (boost::filesystem::filesystem_error& ex) {
-                LOG_LP(ERROR) << ex.what() << " file = " << p.string();
-                return status::err_permission_error;
-            }
-        }
-    }
+    if (auto rc = internal::purge_dir(location_); rc != status::ok) { return rc; }
 
     for (auto & ent : entries) {
         boost::filesystem::path src{ent.source_path()};
