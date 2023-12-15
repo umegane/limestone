@@ -19,7 +19,6 @@
 #include <stdexcept>
 
 #include <boost/filesystem/operations.hpp>
-#include <boost/foreach.hpp>
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
@@ -49,7 +48,7 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
     } else {
         int count = 0;
         // use existing log-dir
-        BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
+        for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(location_)) {
             if (!boost::filesystem::is_directory(p)) {
                 count++;
                 add_file(p);

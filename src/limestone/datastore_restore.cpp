@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #include <boost/filesystem/operations.hpp>
-#include <boost/foreach.hpp>
 
 #include <glog/logging.h>
 #include <limestone/logging.h>
@@ -52,7 +51,7 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         return status::err_broken_data;
     }
 
-    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
+    for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(location_)) {
         if(!boost::filesystem::is_directory(p)) {
             try {
                 boost::filesystem::remove(p);
@@ -63,7 +62,7 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         }
     }
 
-    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
+    for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(from_dir)) {
         try {
             boost::filesystem::copy_file(p, location_ / p.filename());
         }
@@ -73,7 +72,7 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         }
     }
     if (!keep_backup) {
-        BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(from_dir), boost::filesystem::directory_iterator())) {
+        for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(from_dir)) {
             try {
                 boost::filesystem::remove(p);
             }
@@ -127,7 +126,7 @@ status datastore::restore(std::string_view from, std::vector<file_set_entry>& en
 
     // purge logdir
     // FIXME: copied this code from (old) restore(), fix duplicate
-    BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::directory_iterator(location_), boost::filesystem::directory_iterator())) {
+    for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(location_)) {
         if(!boost::filesystem::is_directory(p)) {
             try {
                 boost::filesystem::remove(p);
