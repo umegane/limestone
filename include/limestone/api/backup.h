@@ -18,7 +18,7 @@
 #include <vector>
 #include <set>
 
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 
 #include <limestone/api/log_channel.h>
 

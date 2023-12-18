@@ -18,8 +18,8 @@
 #include <memory>
 #include <vector>
 
-#include <boost/filesystem/path.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <limestone/api/storage_id_type.h>
 #include <limestone/api/large_object_view.h>

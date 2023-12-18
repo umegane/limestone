@@ -15,7 +15,7 @@
  */
 
 #include <byteswap.h>
-#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>

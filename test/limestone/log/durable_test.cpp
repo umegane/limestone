@@ -3,8 +3,7 @@
 #include <sstream>
 #include <limestone/logging.h>
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem.hpp>
 
 #include "internal.h"
 #include "log_entry.h"

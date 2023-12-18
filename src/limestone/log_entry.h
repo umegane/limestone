@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <cassert>
 #include <cstdio>
 #include <endian.h>
 #include <istream>
@@ -22,8 +23,6 @@
 #include <string_view>
 #include <exception>
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <glog/logging.h>
 
 #include <limestone/api/storage_id_type.h>

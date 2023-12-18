@@ -18,7 +18,7 @@
 #include <iomanip>
 #include <stdexcept>
 
-#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <glog/logging.h>
 #include <limestone/logging.h>

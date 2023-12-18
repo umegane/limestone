@@ -17,8 +17,6 @@
 #include <gtest/gtest.h>
 #include <glog/logging.h>
 
-#include <boost/filesystem/path.hpp>
-
 #include <limestone/api/datastore.h>
 #include <limestone/api/configuration.h>
 

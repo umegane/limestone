@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// #include <boost/filesystem/operations.hpp>
+
+#include <boost/filesystem.hpp>
 
 #ifdef SORT_METHOD_USE_ROCKSDB
 #include <rocksdb/db.h>

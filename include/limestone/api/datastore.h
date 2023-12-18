@@ -23,7 +23,7 @@
 #include <set>
 #include <mutex>
 
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 
 #include <limestone/status.h>
 #include <limestone/api/backup.h>

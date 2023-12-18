@@ -16,6 +16,8 @@
 
 #include <optional>
 
+#include <boost/filesystem.hpp>
+
 #include <limestone/api/datastore.h>
 
 namespace limestone::internal {

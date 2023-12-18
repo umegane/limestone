@@ -19,8 +19,6 @@
 #include <limestone/logging.h>
 #include "logging_helper.h"
 
-#include <boost/filesystem.hpp>
-
 namespace limestone::api {  // FIXME fill implementation
 
 snapshot::snapshot(const boost::filesystem::path& location) noexcept : dir_(location / boost::filesystem::path(std::string(subdirectory_name_))) {

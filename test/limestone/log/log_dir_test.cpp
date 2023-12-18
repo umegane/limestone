@@ -1,6 +1,5 @@
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem.hpp>
 
 #include <limestone/logging.h>
 

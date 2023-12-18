@@ -21,8 +21,7 @@
 #include <cstdint>
 #include <atomic>
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem.hpp>
 
 #include <limestone/status.h>
 #include <limestone/api/storage_id_type.h>

@@ -20,7 +20,7 @@
 #include <string_view>
 #include <vector>
 
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 
 #include <limestone/api/epoch_id_type.h>
 
