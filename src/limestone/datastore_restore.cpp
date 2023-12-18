@@ -25,6 +25,9 @@
 
 namespace limestone::internal {
 
+static constexpr const char *version_error_prefix = "/:limestone unsupported backup persistent format version: "
+    "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/upgrade-guide.md";
+
 status purge_dir(const boost::filesystem::path& dir) {
     for (const boost::filesystem::path& p : boost::filesystem::directory_iterator(dir)) {
         if (!boost::filesystem::is_directory(p)) {
@@ -39,24 +42,7 @@ status purge_dir(const boost::filesystem::path& dir) {
     return status::ok;
 }
 
-}  // namespace limestone::internal
-
-namespace limestone::api {
-
-static constexpr const char *version_error_prefix = "/:limestone unsupported backup persistent format version: "
-    "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/upgrade-guide.md";
-
-status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
-    VLOG_LP(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << std::boolalpha << keep_backup;
-    auto from_dir = boost::filesystem::path(std::string(from));
-
-    // log_dir version check
-    boost::filesystem::path manifest_path = from_dir / std::string(internal::manifest_file_name);
-    if (!boost::filesystem::exists(manifest_path)) {
-        VLOG_LP(log_info) << "no manifest file in backup";
-        LOG(ERROR) << version_error_prefix << " (version mismatch: version 0, server supports version 1)";
-        return status::err_broken_data;
-    }
+static status check_manifest(const boost::filesystem::path& manifest_path) {
     std::string ver_err;
     int vc = internal::is_supported_version(manifest_path, ver_err);
     if (vc == 0) {
@@ -68,6 +54,25 @@ status datastore::restore(std::string_view from, bool keep_backup) const noexcep
         LOG(ERROR) << "/:limestone backup data is corrupted, can not use.";
         return status::err_broken_data;
     }
+    return status::ok;
+}
+
+}  // namespace limestone::internal
+
+namespace limestone::api {
+
+status datastore::restore(std::string_view from, bool keep_backup) const noexcept {
+    VLOG_LP(log_debug) << "restore begin, from directory = " << from << " , keep_backup = " << std::boolalpha << keep_backup;
+    auto from_dir = boost::filesystem::path(std::string(from));
+
+    // log_dir version check
+    boost::filesystem::path manifest_path = from_dir / std::string(internal::manifest_file_name);
+    if (!boost::filesystem::exists(manifest_path)) {
+        VLOG_LP(log_info) << "no manifest file in backup";
+        LOG(ERROR) << internal::version_error_prefix << " (version mismatch: version 0, server supports version 1)";
+        return status::err_broken_data;
+    }
+    if (auto rc = internal::check_manifest(manifest_path); rc != status::ok) { return rc; }
 
     if (auto rc = internal::purge_dir(location_); rc != status::ok) { return rc; }
 
@@ -114,22 +119,12 @@ status datastore::restore(std::string_view from, std::vector<file_set_entry>& en
             LOG_LP(ERROR) << "file not found : file = " << src.string();
             return status::err_not_found;
         }
-        std::string ver_err;
-        int vc = internal::is_supported_version(src, ver_err);
-        if (vc == 0) {
-            LOG(ERROR) << version_error_prefix << " (" << ver_err << ")";
-            return status::err_broken_data;
-        }
-        if (vc < 0) {
-            VLOG_LP(log_info) << ver_err;
-            LOG(ERROR) << "/:limestone backup data is corrupted, can not use.";
-            return status::err_broken_data;
-        }
+        if (auto rc = internal::check_manifest(src); rc != status::ok) { return rc; }
         manifest_count++;
     }
     if (manifest_count < 1) {  // XXX: change to != 1 ??
         VLOG_LP(log_info) << "no manifest file in backup";
-        LOG(ERROR) << version_error_prefix << " (version mismatch: version 0, server supports version 1)";
+        LOG(ERROR) << internal::version_error_prefix << " (version mismatch: version 0, server supports version 1)";
         return status::err_broken_data;
     }
 
