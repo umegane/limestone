@@ -267,7 +267,7 @@ void datastore::create_snapshot() {
 
     int num_worker = recover_max_parallelism_;
     if (!works_with_multi_thread && num_worker > 1) {
-        LOG(INFO) << "/limestone:config:datastore this sort method does not work correctly with multi-thread, so force the number of recover process thread = 1";
+        LOG(INFO) << "/:limestone:config:datastore this sort method does not work correctly with multi-thread, so force the number of recover process thread = 1";
         num_worker = 1;
     }
     auto is_wal = [](const boost::filesystem::path& p){ return p.filename().string().substr(0, log_channel::prefix.length()) == log_channel::prefix; };

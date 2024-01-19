@@ -33,7 +33,7 @@ namespace limestone::api {
 datastore::datastore() noexcept = default;
 
 datastore::datastore(configuration const& conf) : location_(conf.data_locations_.at(0)) {
-    LOG(INFO) << "/limestone:config:datastore setting log location = " << location_.string();
+    LOG(INFO) << "/:limestone:config:datastore setting log location = " << location_.string();
     boost::system::error_code error;
     const bool result_check = boost::filesystem::exists(location_, error);
     boost::filesystem::path manifest_path = boost::filesystem::path(location_) / std::string(internal::manifest_file_name);
@@ -78,7 +78,7 @@ datastore::datastore(configuration const& conf) : location_(conf.data_locations_
     }
 
     recover_max_parallelism_ = conf.recover_max_parallelism_;
-    LOG(INFO) << "/limestone:config:datastore setting the number of recover process thread = " << recover_max_parallelism_;
+    LOG(INFO) << "/:limestone:config:datastore setting the number of recover process thread = " << recover_max_parallelism_;
 
     VLOG_LP(log_debug) << "datastore is created, location = " << location_.string();
 }
