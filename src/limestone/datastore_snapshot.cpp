@@ -63,7 +63,6 @@ void datastore::create_snapshot() {
     dblog_scan logscan{location_};
 
     epoch_id_type ld_epoch = logscan.last_durable_epoch_in_dir();
-    epoch_id_switched_.store(ld_epoch + 1);  // ??
 
     [[maybe_unused]]
     auto insert_entry_or_update_to_max = [&sortdb](log_entry& e){
@@ -114,6 +113,7 @@ void datastore::create_snapshot() {
     logscan.set_thread_num(num_worker);
     try {
         epoch_id_type max_appeared_epoch = logscan.scan_pwal_files_throws(ld_epoch, add_entry);
+        epoch_id_switched_.store(max_appeared_epoch);
         epoch_id_informed_.store(max_appeared_epoch);
     } catch (std::runtime_error& e) {
         VLOG_LP(log_info) << "failed to scan pwal files: " << e.what();
