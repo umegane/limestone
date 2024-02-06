@@ -31,6 +31,12 @@ target_link_libraries(${package_name}
         PRIVATE nlohmann_json::nlohmann_json
 )
 
+if (ENABLE_ALTIMETER)
+    target_link_libraries(${package_name}
+        PRIVATE altimeter
+    )
+endif()
+
 set_compile_options(${package_name})
 
 install_custom(${package_name} ${export_name})

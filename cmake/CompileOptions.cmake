@@ -51,3 +51,8 @@ endif()
 if(BUILD_SHIRAKAMI_WP)
     add_definitions(-DBUILD_SHIRAKAMI_WP)
 endif()
+
+if(ENABLE_ALTIMETER)
+    message("altimeter enabled")
+    add_definitions(-DENABLE_ALTIMETER)
+endif()
