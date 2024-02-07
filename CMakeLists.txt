@@ -36,6 +36,7 @@ option(BUILD_SHARED_LIBS "build shared libraries instead of static" ON)
 option(ENABLE_GOOGLE_PERFTOOLS "Enable Google Perftools" OFF)
 option(PERFORMANCE_TOOLS "Enable tooling to measure engine performance" OFF)
 option(TRACY_ENABLE "enable tracy profiler" OFF)
+option(ENABLE_ALTIMETER "enable altimeter logging" OFF)
 
 if (ENABLE_GOOGLE_PERFTOOLS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_GOOGLE_PERFTOOLS")
@@ -65,6 +66,10 @@ else()
     message(FATAL_ERROR "unsupported RECOVERY_SORTER_KVSLIB value: ${RECOVERY_SORTER_KVSLIB_UPPERCASE}")
 endif()
 find_package(nlohmann_json 3.7.0 REQUIRED)
+if (ENABLE_ALTIMETER)
+    find_package(altimeter REQUIRED)
+    find_package(fmt REQUIRED)
+endif()
 
 add_subdirectory(third_party) # should be before enable_testing()
 
