@@ -267,7 +267,7 @@ public:
     void write_version(write_version_type& buf) {
         memcpy(static_cast<void*>(&buf), value_etc_.data(), sizeof(epoch_id_type) + sizeof(std::uint64_t));
     }
-    storage_id_type storage() {
+    [[nodiscard]] storage_id_type storage() const {
         storage_id_type storage_id{};
         memcpy(static_cast<void*>(&storage_id), key_sid_.data(), sizeof(storage_id_type));
         return storage_id;
@@ -278,7 +278,7 @@ public:
     void key(std::string& buf) {
         buf = key_sid_.substr(sizeof(storage_id_type));
     }
-    entry_type type() {
+    [[nodiscard]] entry_type type() const {
         return entry_type_;
     }
     [[nodiscard]] epoch_id_type epoch_id() const {
