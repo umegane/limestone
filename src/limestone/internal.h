@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2023 Project Tsurugi.
+ * Copyright 2023-2024 Project Tsurugi.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#pragma once
+
 #include <optional>
 
 #include <boost/filesystem.hpp>
@@ -23,19 +25,13 @@
 namespace limestone::internal {
 using namespace limestone::api;
 
-// from datastore_snapshot.cpp
+// from dblog_scan.cpp
 
 // return max epoch in file.
 std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& file);
 
+// deprecated, to be removed
 epoch_id_type scan_one_pwal_file(const boost::filesystem::path& pwal, epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry);
-
-/**
- * @returns max epoch value in directory
- */
-epoch_id_type scan_pwal_files_in_dir(const boost::filesystem::path& from_dir, int num_worker,
-                                     const std::function<bool(const boost::filesystem::path&)>& is_wal,
-                                     epoch_id_type ld_epoch, const std::function<void(log_entry&)>& add_entry);
 
 // from datastore_format.cpp
 

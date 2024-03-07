@@ -188,7 +188,8 @@ TEST_F(durable_test, ut_scan_one_pwal_file_nondurable_entry) {
     }
 }
 
-TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_trimmed) {
+// broken entry in non durable epoch is ignored
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_nondurable_trimmed) {
     using namespace limestone::api;
 
     boost::filesystem::path pwal(location);
@@ -205,8 +206,29 @@ TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_trimmed) {
     }
     auto add_entry = [](log_entry&){ /* nop */ };
 
+    EXPECT_EQ(limestone::internal::scan_one_pwal_file(pwal, 42, add_entry), 43);
+}
+
+// broken entry in durable epoch is error
+TEST_F(durable_test, ut_scan_one_pwal_file_broken_entry_trimmed) {
+    using namespace limestone::api;
+
+    boost::filesystem::path pwal(location);
+    pwal /= "pwal";
+    {  // make pwal file for test
+        FILE *f = fopen(pwal.c_str(), "w");
+        log_entry::begin_session(f, 42);
+        log_entry::write(f, 1, "k1", "v1", {42, 1});
+        log_entry::begin_session(f, 43);
+        // make broken entry
+        fputc(static_cast<int>(log_entry::entry_type::normal_entry), f);
+        fputc(99, f);  // the end of file is missing
+        fclose(f);
+    }
+    auto add_entry = [](log_entry&){ /* nop */ };
+
     EXPECT_THROW({
-        limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
+        limestone::internal::scan_one_pwal_file(pwal, 43, add_entry);
     }, std::exception);
 }
 

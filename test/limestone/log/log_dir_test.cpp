@@ -3,12 +3,14 @@
 
 #include <limestone/logging.h>
 
+#include "dblog_scan.h"
 #include "internal.h"
 #include "log_entry.h"
 
 #include "test_root.h"
 
 using namespace std::literals;
+using dblog_scan = limestone::internal::dblog_scan;
 
 namespace limestone::testing {
 
@@ -249,8 +251,11 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_normal) {
                 // XXX: epoch footer...
                 ""sv);
 
-    gen_datastore();
-    EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x100);
+    // gen_datastore();
+    // EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x100);
+    limestone::internal::dblog_scan ds{boost::filesystem::path(location)};
+    ds.set_thread_num(2);
+    EXPECT_EQ(ds.scan_pwal_files_throws(0x100, ignore_entry), 0x100);
 }
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
@@ -263,8 +268,11 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
                 // XXX: epoch footer...
                 ""sv);
 
-    gen_datastore();
-    EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x101);
+    // gen_datastore();
+    // EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x101);
+    limestone::internal::dblog_scan ds{boost::filesystem::path(location)};
+    ds.set_thread_num(2);
+    EXPECT_EQ(ds.scan_pwal_files(0x100, ignore_entry, [](limestone::api::log_entry::read_error&){return false;}), 0x101);
 }
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
@@ -276,9 +284,14 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
                 "\x02\x01\x01\x00\x00\x00"
                 ""sv);
 
-    gen_datastore();
+    // gen_datastore();
+    // EXPECT_THROW({
+    //     limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry);
+    // }, std::exception);
+    limestone::internal::dblog_scan ds{boost::filesystem::path(location)};
+    ds.set_thread_num(2);
     EXPECT_THROW({
-        limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry);
+        ds.scan_pwal_files_throws(0x100, ignore_entry);
     }, std::exception);
 }
 
@@ -291,9 +304,14 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
                 "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
                 ""sv);
 
-    gen_datastore();
+    // gen_datastore();
+    // EXPECT_THROW({
+    //     limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry);
+    // }, std::exception);
+    limestone::internal::dblog_scan ds{boost::filesystem::path(location)};
+    ds.set_thread_num(2);
     EXPECT_THROW({
-        limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry);
+        ds.scan_pwal_files_throws(0x100, ignore_entry);
     }, std::exception);
 }
 
