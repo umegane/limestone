@@ -14,6 +14,8 @@ using dblog_scan = limestone::internal::dblog_scan;
 
 namespace limestone::testing {
 
+extern void create_file(boost::filesystem::path path, std::string_view content);
+
 class log_dir_test : public ::testing::Test {
 public:
 static constexpr const char* location = "/tmp/log_dir_test";
@@ -46,11 +48,14 @@ static_assert(epoch_0_str.length() == 9);
     static bool is_pwal(const boost::filesystem::path& p) { return starts_with(p.filename().string(), "pwal"); }
     static void ignore_entry(limestone::api::log_entry&) {}
 
+    void create_mainfest_file(int persistent_format_version = 1) {
+        create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": " + std::to_string(persistent_format_version) + " }");
+    }
+
 protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-extern void create_file(boost::filesystem::path path, std::string_view content);
 
 TEST_F(log_dir_test, newly_created_directory_contains_manifest_file) {
     gen_datastore();
@@ -90,21 +95,21 @@ TEST_F(log_dir_test, reject_directory_only_broken_manifest_file2) {
 
 TEST_F(log_dir_test, accept_directory_with_correct_manifest_file) {
     create_file(boost::filesystem::path(location) / "epoch", epoch_0_str);
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    create_mainfest_file();
 
     gen_datastore();
     limestone::internal::check_logdir_format(location);  // success
 }
 
 TEST_F(log_dir_test, accept_directory_only_correct_manifest_file) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    create_mainfest_file();
 
     gen_datastore();
     limestone::internal::check_logdir_format(location);  // success
 }
 
 TEST_F(log_dir_test, reject_directory_of_different_version) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 222 }");
+    create_mainfest_file(222);
 
     gen_datastore();
     EXPECT_THROW({ limestone::internal::check_logdir_format(location); }, std::exception);
@@ -242,7 +247,7 @@ TEST_F(log_dir_test, rotate_prusik_rejects_corrupted_dir) {
 }
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_normal) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_mainfest_file();  // not used
     create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
                 "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
@@ -259,7 +264,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_normal) {
 }
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_mainfest_file();  // not used
     create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
                 "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
@@ -276,7 +281,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
 }
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_mainfest_file();  // not used
     create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
                 "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
@@ -296,7 +301,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
 }
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_mainfest_file();  // not used
     create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
                 "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
@@ -316,7 +321,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
 }
 
 TEST_F(log_dir_test, ut_purge_dir_ok_file1) {
-    create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_mainfest_file();  // not used
     ASSERT_FALSE(boost::filesystem::is_empty(location));
 
     ASSERT_EQ(internal::purge_dir(location), status::ok);

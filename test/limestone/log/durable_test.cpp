@@ -171,7 +171,7 @@ TEST_F(durable_test, ut_scan_one_pwal_file_nondurable_entry) {
     epoch_id_type last_epoch = limestone::internal::scan_one_pwal_file(pwal, 42, add_entry);
     EXPECT_EQ(last_epoch, 43);
     EXPECT_EQ(entries.size(), 1);
-    {  // make pwal file for test
+    {  // check (marked) pwal file after scan
         std::ifstream in;
         log_entry e;
         in.open(pwal, std::ios::in | std::ios::binary);
