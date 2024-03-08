@@ -58,3 +58,16 @@ target_link_libraries(limestone-impl
         INTERFACE ${sort_lib}
         INTERFACE nlohmann_json::nlohmann_json
 )
+
+# utils
+file(GLOB DBLOGUTIL_SOURCES
+        "limestone/dblogutil/*.cpp"
+)
+
+add_executable(dblogutil ${DBLOGUTIL_SOURCES})
+target_include_directories(dblogutil
+        PRIVATE .
+        PRIVATE ./limestone
+        )
+target_link_libraries(dblogutil PRIVATE limestone-impl PRIVATE glog::glog gflags::gflags)
+install_custom(dblogutil dblogutil)
