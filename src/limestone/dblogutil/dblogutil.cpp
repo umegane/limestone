@@ -31,6 +31,9 @@ DEFINE_string(epoch, "", "specify valid epoch upper limit");
 DEFINE_int32(thread_num, 1, "specify thread num of scanning wal file");
 DEFINE_bool(cut, false, "repair by cutting for error-truncate and error-broken");
 DEFINE_string(rotate, "all", "rotate files");
+DEFINE_string(output_format, "human-readable", "format of output (human-readable/machine-readable)");
+
+enum subcommand { cmd_inspect, cmd_repair };
 
 void log_and_exit(int error) {
     VLOG(10) << "exiting with code " << error;
@@ -66,7 +69,7 @@ void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     std::cout << "max-appeared-epoch: " << max_appeared_epoch << std::endl;
     std::cout << "count-normal: " << count_normal_entry << std::endl;
     std::cout << "count-remove: " << count_remove_entry << std::endl;
-    std::cout << "status-code: " << max_ec << std::endl;
+    VLOG(10) << "scan_pwal_files done, max_ec = " << max_ec;
     std::cout << "persistent-format-version: 1" << std::endl;
     switch (max_ec) {
     case dblog_scan::parse_error::ok:
@@ -81,6 +84,8 @@ void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
         std::cout << "status: auto-repairable" << std::endl;
         log_and_exit(1);
     case dblog_scan::parse_error::unexpected:
+        std::cout << "status: unrepairable" << std::endl;
+        log_and_exit(2);
     case dblog_scan::parse_error::failed:
         std::cout << "status: cannot-check" << std::endl;
         log_and_exit(64);
@@ -103,7 +108,7 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     VLOG(30) << "detach all pwal files";
     ds.detach_wal_files();
     dblog_scan::parse_error::code max_ec{};
-    ds.scan_pwal_files(ld_epoch, []([[maybe_unused]] log_entry& e){}, [](log_entry::read_error& e) -> bool {
+    ds.scan_pwal_files(ld_epoch, [](log_entry&){}, [](log_entry::read_error& e) -> bool {
         // no process_at_xxx is set to "report", so never reach here
         LOG_LP(ERROR) << "this pwal file is broken: " << e.message();
         throw std::runtime_error("pwal file read error");
@@ -121,32 +126,23 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
         LOG(FATAL) << "status: unreachable " << max_ec;
     case dblog_scan::parse_error::broken_after:
     case dblog_scan::parse_error::nondurable_entries:
-        std::cout << "status: cannot-repair" << std::endl;
-        log_and_exit(1);
     case dblog_scan::parse_error::unexpected:
+        std::cout << "status: unrepairable" << std::endl;
+        log_and_exit(1);
     case dblog_scan::parse_error::failed:
         std::cout << "status: cannot-check" << std::endl;
         log_and_exit(64);
     }
 }
 
-int main(int argc, char *argv[]) {  // NOLINT
+int main(char *dir, subcommand mode) {  // NOLINT
     std::optional<epoch_id_type> opt_epoch;
     if (FLAGS_epoch.empty()) {
         opt_epoch = std::nullopt;
     } else {
         opt_epoch = std::stoul(FLAGS_epoch);
     }
-    enum { inspect, repair } mode{};
-    if (strcmp(argv[1], "inspect") == 0) {  // NOLINT(*-pointer-arithmetic)
-        mode = inspect;
-    } else if (strcmp(argv[1], "repair") == 0) {  // NOLINT(*-pointer-arithmetic)
-        mode = repair;
-    } else {
-        LOG(ERROR) << "unknown subcommand";
-        log_and_exit(64);
-    }
-    boost::filesystem::path p(argv[2]);  // NOLINT(*-pointer-arithmetic)
+    boost::filesystem::path p(dir);
     std::cout << "dblogdir: " << p << std::endl;
     if (!boost::filesystem::exists(p)) {
         LOG(ERROR) << "dblogdir not exists";
@@ -159,8 +155,8 @@ int main(int argc, char *argv[]) {  // NOLINT
     }
     dblog_scan ds(p);
     ds.set_thread_num(FLAGS_thread_num);
-    if (mode == inspect) limestone::inspect(ds, opt_epoch);
-    if (mode == repair) limestone::repair(ds, opt_epoch);
+    if (mode == cmd_inspect) inspect(ds, opt_epoch);
+    if (mode == cmd_repair) repair(ds, opt_epoch);
     return 0;
 }
 
@@ -169,10 +165,25 @@ int main(int argc, char *argv[]) {  // NOLINT
 int main(int argc, char *argv[]) {  // NOLINT
     FLAGS_logtostderr = true;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    google::InitGoogleLogging(argv[0]);  // NOLINT(*-pointer-arithmetic)
+    const char *arg0 = argv[0];  // NOLINT(*-pointer-arithmetic)
+    google::InitGoogleLogging(arg0);
+    subcommand mode{};
+    auto usage = [&arg0]() {
+        std::cout << "usage: " << arg0 << " {inspect | repair} [options] <dblogdir>" << std::endl;
+        log_and_exit(100);
+    };
     if (argc < 3) {
         LOG(ERROR) << "missing parameters";
-        log_and_exit(64);
+        usage();
     }
-    return limestone::main(argc, argv);
+    const char *arg1 = argv[1];  // NOLINT(*-pointer-arithmetic)
+    if (strcmp(arg1, "inspect") == 0) {
+        mode = cmd_inspect;
+    } else if (strcmp(arg1, "repair") == 0) {
+        mode = cmd_repair;
+    } else {
+        LOG(ERROR) << "unknown subcommand: " << arg1;
+        usage();
+    }
+    return limestone::main(argv[2], mode);  // NOLINT(*-pointer-arithmetic)
 }

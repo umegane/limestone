@@ -243,6 +243,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     break;
                 case process_at_nondurable::repair_by_mark:
                     invalidate_epoch_snippet(strm);
+                    VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                     invalidated_wrote = true;
                     if (pe.value() < parse_error::repaired) {
                         pe = parse_error(parse_error::repaired);
@@ -283,6 +284,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     break;
                 case process_at_truncated::repair_by_mark:
                     invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                    VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                     pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
                     break;
                 case process_at_truncated::repair_by_cut:
@@ -312,6 +314,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                 break;
             case process_at_truncated::repair_by_mark:
                 invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                 pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
                 break;
             case process_at_truncated::repair_by_cut:
@@ -342,6 +345,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     break;
                 case process_at_damaged::repair_by_mark:
                     invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                    VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                     pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
                     break;
                 case process_at_damaged::repair_by_cut:
@@ -375,7 +379,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
         // DO trim
         // TODO: check byte at fpos is 0x02 or 0x06
         boost::filesystem::resize_file(p, pe.fpos());
-        VLOG(40) << "trimmed at " << pe.fpos();
+        VLOG_LP(0) << "trimmed " << p << " at offset " << pe.fpos();
         pe.value(parse_error::repaired);
     }
     return max_epoch_of_file;
