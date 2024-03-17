@@ -36,7 +36,12 @@ std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& f
 
     boost::filesystem::ifstream istrm;
     log_entry e;
+    // ASSERT: file exists
     istrm.open(file, std::ios_base::in | std::ios_base::binary);
+    if (!istrm) {  // permission?
+        LOG_LP(ERROR) << "cannot read epoch file: " << file;
+        throw std::runtime_error("cannot read epoch file");
+    }
     while (e.read(istrm)) {
         if (e.type() != log_entry::entry_type::marker_durable) {
             LOG_LP(ERROR) << "this epoch file is broken: unexpected log_entry type: " << static_cast<int>(e.type());
@@ -53,7 +58,14 @@ std::optional<epoch_id_type> last_durable_epoch(const boost::filesystem::path& f
 epoch_id_type dblog_scan::last_durable_epoch_in_dir() {
     auto& from_dir = dblogdir_;
     // read main epoch file first
-    std::optional<epoch_id_type> ld_epoch = last_durable_epoch(from_dir / std::string(epoch_file_name));
+    auto main_epoch_file = from_dir / std::string(epoch_file_name);
+    if (!boost::filesystem::exists(main_epoch_file)) {
+        // datastore operations (ctor and rotate) ensure that the main epoch file exists.
+        // so it may directory called from outside of datastore
+        LOG_LP(ERROR) << "epoch file does not exist: " << main_epoch_file;
+        throw std::runtime_error("epoch file does not exist");
+    }
+    std::optional<epoch_id_type> ld_epoch = last_durable_epoch(main_epoch_file);
     if (ld_epoch.has_value()) {
         return *ld_epoch;
     }

@@ -43,8 +43,15 @@ void log_and_exit(int error) {
 namespace limestone {
 
 void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
-    epoch_id_type ld_epoch = ds.last_durable_epoch_in_dir();
+    epoch_id_type ld_epoch{};
+    try {
+        ld_epoch = ds.last_durable_epoch_in_dir();
+    } catch (std::runtime_error& ex) {
+        LOG(ERROR) << "reading epoch file is failed: " << ex.what();
+        log_and_exit(64);
+    }
     std::cout << "durable-epoch: " << ld_epoch << std::endl;
+    LOG(INFO);
     std::atomic_size_t count_normal_entry = 0;
     std::atomic_size_t count_remove_entry = 0;
     ds.set_process_at_nondurable_epoch_snippet(dblog_scan::process_at_nondurable::report);
@@ -97,7 +104,12 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     if (epoch.has_value()) {
         ld_epoch = epoch.value();
     } else {
-        ld_epoch = ds.last_durable_epoch_in_dir();
+        try {
+            ld_epoch = ds.last_durable_epoch_in_dir();
+        } catch (std::runtime_error& ex) {
+            LOG(ERROR) << "reading epoch file is failed: " << ex.what();
+            log_and_exit(64);
+        }
         std::cout << "durable-epoch: " << ld_epoch << std::endl;
     }
     ds.set_process_at_nondurable_epoch_snippet(dblog_scan::process_at_nondurable::repair_by_mark);
