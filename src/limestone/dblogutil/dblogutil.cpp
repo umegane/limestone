@@ -74,8 +74,7 @@ void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
         return false;
     }, &max_ec);
     std::cout << "max-appeared-epoch: " << max_appeared_epoch << std::endl;
-    std::cout << "count-normal: " << count_normal_entry << std::endl;
-    std::cout << "count-remove: " << count_remove_entry << std::endl;
+    std::cout << "count-durable-wal-entries: " << (count_normal_entry + count_remove_entry) << std::endl;
     VLOG(10) << "scan_pwal_files done, max_ec = " << max_ec;
     std::cout << "persistent-format-version: 1" << std::endl;
     switch (max_ec) {
@@ -119,13 +118,15 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
 
     VLOG(30) << "detach all pwal files";
     ds.detach_wal_files();
+    std::atomic_size_t count_wal_entry = 0;
     dblog_scan::parse_error::code max_ec{};
-    ds.scan_pwal_files(ld_epoch, [](log_entry&){}, [](log_entry::read_error& e) -> bool {
+    ds.scan_pwal_files(ld_epoch, [&count_wal_entry](log_entry&){ count_wal_entry++; }, [](log_entry::read_error& e) -> bool {
         // no process_at_xxx is set to "report", so never reach here
         LOG_LP(ERROR) << "this pwal file is broken: " << e.message();
         throw std::runtime_error("pwal file read error");
     }, &max_ec);
     VLOG(10) << "scan_pwal_files done, max_ec = " << max_ec;
+    VLOG(10) << "count-durable-wal-entries: " << count_wal_entry;
     switch (max_ec) {
     case dblog_scan::parse_error::ok:
         std::cout << "status: OK" << std::endl;
