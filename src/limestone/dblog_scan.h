@@ -48,7 +48,7 @@ public:
             broken_after_marked = 0x11,
             // error; nondurable snippets exist
             nondurable_entries = 0x40,
-            // error; tail is broken, not repaired
+            // error; tail is broken, not repaired yet (but can repair)
             broken_after = 0x41,
             // error; unexpected (formal) entry, maybe logic error
             unexpected = 0x81,

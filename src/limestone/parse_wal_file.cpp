@@ -28,15 +28,6 @@
 namespace limestone::internal {
 using namespace limestone::api;
 
-void invalidate_epoch_snippet(boost::filesystem::fstream& strm) {
-    auto pos = strm.tellg();
-    strm.seekp(-9, std::ios::cur);  // size of marker_begin entry
-    char buf = static_cast<char>(log_entry::entry_type::marker_invalidated_begin);
-    strm.write(&buf, sizeof(char));
-    strm.flush();
-    strm.seekg(pos, std::ios::beg);  // restore position
-}
-
 void invalidate_epoch_snippet(boost::filesystem::fstream& strm, std::streampos fpos_head_of_epoch_snippet) {
     auto pos = strm.tellg();
     strm.seekp(fpos_head_of_epoch_snippet, std::ios::beg);
@@ -199,6 +190,10 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
     };
     boost::filesystem::fstream strm;
     strm.open(p, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    if (!strm) {
+        LOG_LP(ERROR) << "cannot read pwal file: " << p;
+        throw std::runtime_error("cannot read pwal file");
+    }
     bool valid = true;  // scanning in the normal (not-invalidated) epoch snippet
     bool invalidated_wrote = true;
     bool first = true;
@@ -242,7 +237,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     invalidated_wrote = false;
                     break;
                 case process_at_nondurable::repair_by_mark:
-                    invalidate_epoch_snippet(strm);
+                    invalidate_epoch_snippet(strm, fpos_epoch_snippet);
                     VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                     invalidated_wrote = true;
                     if (pe.value() < parse_error::repaired) {
@@ -270,7 +265,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
             max_epoch_of_file = std::max(max_epoch_of_file, e.epoch_id());
             invalidated_wrote = true;
             valid = false;
-            VLOG_LP(45) << "valid: false";
+            VLOG_LP(45) << "valid: false (already marked)";
             break;
         }
         case lex_token::token_type::SHORT_normal_entry:
@@ -291,7 +286,8 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     pe = parse_error(parse_error::broken_after_tobe_cut, fpos_epoch_snippet);
                     break;
                 case process_at_truncated::report:
-                    if (valid) {  // ignore short in invalidated blocks
+                    if (valid) {
+                        // durable broken data, serious
                         report_error(ec);
                     } else {
                         if (invalidated_wrote) {
@@ -353,6 +349,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     break;
                 case process_at_damaged::report:
                     if (valid) {
+                        // durable broken data, serious
                         report_error(ec);
                         pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
                     } else {
