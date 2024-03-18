@@ -43,6 +43,7 @@ void log_and_exit(int error) {
 namespace limestone {
 
 void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
+    std::cout << "persistent-format-version: 1" << std::endl;
     epoch_id_type ld_epoch{};
     try {
         ld_epoch = ds.last_durable_epoch_in_dir();
@@ -51,7 +52,6 @@ void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
         log_and_exit(64);
     }
     std::cout << "durable-epoch: " << ld_epoch << std::endl;
-    LOG(INFO);
     std::atomic_size_t count_normal_entry = 0;
     std::atomic_size_t count_remove_entry = 0;
     ds.set_process_at_nondurable_epoch_snippet(dblog_scan::process_at_nondurable::report);
@@ -76,7 +76,6 @@ void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     std::cout << "max-appeared-epoch: " << max_appeared_epoch << std::endl;
     std::cout << "count-durable-wal-entries: " << (count_normal_entry + count_remove_entry) << std::endl;
     VLOG(10) << "scan_pwal_files done, max_ec = " << max_ec;
-    std::cout << "persistent-format-version: 1" << std::endl;
     switch (max_ec) {
     case dblog_scan::parse_error::ok:
         std::cout << "status: OK" << std::endl;
