@@ -152,7 +152,8 @@ epoch_id_type dblog_scan::scan_pwal_files(  // NOLINT(readability-function-cogni
                 VLOG(30) << "REPAIRED: " << p;
                 break;
             case parse_error::broken_after_marked:
-                VLOG(30) << "MARKED BUT TAIL IS BROKEN: " << p;
+            case parse_error::broken_after:
+                VLOG(30) << (ec_value == parse_error::broken_after_marked ? "MARKED BUT " : "") << "TAIL IS BROKEN: " << p;
                 if (!is_detached_wal(p)) {
                     if (fail_fast_) {
                         throw std::runtime_error("the end of non-detached file is broken");
@@ -162,7 +163,6 @@ epoch_id_type dblog_scan::scan_pwal_files(  // NOLINT(readability-function-cogni
             case parse_error::nondurable_entries:
                 VLOG(30) << "CONTAINS NONDURABLE ENTRY: " << p;
                 break;
-            case parse_error::broken_after:
             case parse_error::unexpected:
             case parse_error::failed:
                 VLOG(30) << "ERROR: " << p;
