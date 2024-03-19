@@ -89,4 +89,14 @@ void create_file(const boost::filesystem::path& path, std::string_view content) 
     strm.close();
 }
 
+std::string read_entire_file(const boost::filesystem::path& path) {
+    boost::filesystem::ofstream strm{};
+    strm.open(path, std::ios_base::in | std::ios_base::binary);
+    assert(strm.good());
+    std::ostringstream ss;
+    ss << strm.rdbuf();
+    strm.close();
+    return ss.str();
+}
+
 }

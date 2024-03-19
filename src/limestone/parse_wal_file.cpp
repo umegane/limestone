@@ -36,6 +36,9 @@ void invalidate_epoch_snippet(boost::filesystem::fstream& strm, std::streampos f
     strm.flush();
     // TODO fsync
     strm.seekg(pos, std::ios::beg);  // restore position
+    if (!strm) {
+        LOG_LP(ERROR) << "I/O error at marking epoch snippet header";
+    }
 }
 
 // LOGFORMAT_v1 pWAL syntax
@@ -280,6 +283,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                 case process_at_truncated::ignore:
                     break;
                 case process_at_truncated::repair_by_mark:
+                    strm.clear();  // reset eof
                     invalidate_epoch_snippet(strm, fpos_epoch_snippet);
                     VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                     pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
@@ -305,6 +309,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
             case process_at_truncated::ignore:
                 break;
             case process_at_truncated::repair_by_mark:
+                strm.clear();  // reset eof
                 invalidate_epoch_snippet(strm, fpos_epoch_snippet);
                 VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                 pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
@@ -327,6 +332,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
             case process_at_truncated::ignore:
                 break;
             case process_at_truncated::repair_by_mark:
+                strm.clear();  // reset eof
                 invalidate_epoch_snippet(strm, fpos_epoch_snippet);
                 VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                 pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
@@ -351,6 +357,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                 case process_at_damaged::ignore:
                     break;
                 case process_at_damaged::repair_by_mark:
+                    strm.clear();  // reset eof
                     invalidate_epoch_snippet(strm, fpos_epoch_snippet);
                     VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                     pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
