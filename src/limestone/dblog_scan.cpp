@@ -138,7 +138,7 @@ epoch_id_type dblog_scan::scan_pwal_files(  // NOLINT(readability-function-cogni
     std::atomic<epoch_id_type> max_appeared_epoch{ld_epoch};
     if (max_parse_error_value) { *max_parse_error_value = dblog_scan::parse_error::failed; }
     std::atomic<dblog_scan::parse_error::code> max_error_value{dblog_scan::parse_error::code::ok};
-    auto process_file = [&](const boost::filesystem::path& p) {
+    auto process_file = [&](const boost::filesystem::path& p) {  // NOLINT(readability-function-cognitive-complexity)
         if (is_wal(p)) {
             parse_error ec;
             auto rc = scan_one_pwal_file(p, ld_epoch, add_entry, report_error, ec);
@@ -152,8 +152,18 @@ epoch_id_type dblog_scan::scan_pwal_files(  // NOLINT(readability-function-cogni
                 VLOG(30) << "REPAIRED: " << p;
                 break;
             case parse_error::broken_after_marked:
+                if (!is_detached_wal(p)) {
+                    VLOG(30) << "MARKED BUT TAIL IS BROKEN (NOT DETACHED): " << p;
+                    if (fail_fast_) {
+                        throw std::runtime_error("the end of non-detached file is broken");
+                    }
+                } else {
+                    VLOG(30) << "MARKED BUT TAIL IS BROKEN (DETACHED): " << p;
+                    ec.value(ec.modified() ? parse_error::repaired : parse_error::ok);
+                }
+                break;
             case parse_error::broken_after:
-                VLOG(30) << (ec_value == parse_error::broken_after_marked ? "MARKED BUT " : "") << "TAIL IS BROKEN: " << p;
+                VLOG(30) << "TAIL IS BROKEN: " << p;
                 if (!is_detached_wal(p)) {
                     if (fail_fast_) {
                         throw std::runtime_error("the end of non-detached file is broken");

@@ -184,6 +184,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
     epoch_id_type current_epoch{UINT64_MAX};
     epoch_id_type max_epoch_of_file{0};
     log_entry::read_error ec{};
+    int fixed = 0;
 
     log_entry e;
     auto err_unexpected = [&](){
@@ -201,6 +202,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
     bool valid = true;  // scanning in the normal (not-invalidated) epoch snippet
     [[maybe_unused]]
     bool invalidated_wrote = true;  // invalid mark is wrote, so no need to mark again
+    bool marked_before_scan{};  // scanning epoch-snippet already marked before this scan
     bool first = true;
     ec.value(log_entry::read_error::ok);
     std::streampos fpos_epoch_snippet;
@@ -221,6 +223,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                 }
             } else {
                 err_unexpected();
+                pe = parse_error(parse_error::unexpected, fpos_before_read_entry);
                 if (fail_fast_) aborted = true;
             }
             break;
@@ -232,6 +235,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
             fpos_epoch_snippet = fpos_before_read_entry;
             current_epoch = e.epoch_id();
             max_epoch_of_file = std::max(max_epoch_of_file, current_epoch);
+            marked_before_scan = false;
             if (current_epoch <= ld_epoch) {
                 valid = true;
                 invalidated_wrote = false;
@@ -245,6 +249,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                 case process_at_nondurable::repair_by_mark:
                     invalidate_epoch_snippet(strm, fpos_epoch_snippet);
                     VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
+                    fixed++;
                     invalidated_wrote = true;
                     if (pe.value() < parse_error::repaired) {
                         pe = parse_error(parse_error::repaired);
@@ -269,6 +274,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
 // marker_invalidated_begin : { head_pos := ...; max-epoch := max(...); valid := false } -> loop
             fpos_epoch_snippet = fpos_before_read_entry;
             max_epoch_of_file = std::max(max_epoch_of_file, e.epoch_id());
+            marked_before_scan = true;
             invalidated_wrote = true;
             valid = false;
             VLOG_LP(45) << "valid: false (already marked)";
@@ -279,15 +285,24 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
 // SHORT_normal_entry | SHORT_remove_entry : (not 1st) { if (valid) error-truncated } -> END
             if (first) {
                 err_unexpected();
+                pe = parse_error(parse_error::unexpected, fpos_before_read_entry);
             } else {
                 switch (process_at_truncated_) {
                 case process_at_truncated::ignore:
                     break;
                 case process_at_truncated::repair_by_mark:
                     strm.clear();  // reset eof
-                    invalidate_epoch_snippet(strm, fpos_epoch_snippet);
-                    VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
-                    pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
+                    if (valid) {
+                        invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                        fixed++;
+                        VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
+                        // quitting loop just after this, so no need to change 'valid', but...
+                        valid = false;
+                        VLOG_LP(45) << "valid: false";
+                    }
+                    if (pe.value() < parse_error::broken_after_marked) {
+                        pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
+                    }
                     break;
                 case process_at_truncated::repair_by_cut:
                     pe = parse_error(parse_error::broken_after_tobe_cut, fpos_epoch_snippet);
@@ -296,8 +311,15 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     if (valid) {
                         // durable broken data, serious
                         report_error(ec);
+                        pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
+                    } else if (marked_before_scan) {
+                        if (pe.value() < parse_error::broken_after_marked) {
+                            pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
+                        }
+                    } else {
+                        // marked during inspect
+                        pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
                     }
-                    pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
                 }
             }
             aborted = true;
@@ -306,12 +328,14 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
         case lex_token::token_type::SHORT_marker_begin: {
 // SHORT_marker_begin : { head_pos := ...; error-truncated } -> END
             fpos_epoch_snippet = fpos_before_read_entry;
+            marked_before_scan = false;
             switch (process_at_truncated_) {
             case process_at_truncated::ignore:
                 break;
             case process_at_truncated::repair_by_mark:
                 strm.clear();  // reset eof
                 invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                fixed++;
                 VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                 pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
                 break;
@@ -328,14 +352,16 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
         case lex_token::token_type::SHORT_marker_inv_begin: {
 // SHORT_marker_inv_begin : { head_pos := ... } -> END
             fpos_epoch_snippet = fpos_before_read_entry;
+            marked_before_scan = true;
             // ignore short in invalidated blocks
             switch (process_at_truncated_) {
             case process_at_truncated::ignore:
                 break;
             case process_at_truncated::repair_by_mark:
                 strm.clear();  // reset eof
-                invalidate_epoch_snippet(strm, fpos_epoch_snippet);
-                VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
+                // invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                // fixed++;
+                // VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
                 pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
                 break;
             case process_at_truncated::repair_by_cut:
@@ -343,7 +369,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                 break;
             case process_at_truncated::report:
                 report_error(ec);
-                pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
+                pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
             }
             aborted = true;
             break;
@@ -353,15 +379,24 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
 // UNKNOWN_TYPE_entry : (1st) { error-broken-snippet-header } -> END
             if (first) {
                 err_unexpected();  // FIXME: error type
+                pe = parse_error(parse_error::unexpected, fpos_before_read_entry);
             } else {
                 switch (process_at_damaged_) {
                 case process_at_damaged::ignore:
                     break;
                 case process_at_damaged::repair_by_mark:
                     strm.clear();  // reset eof
-                    invalidate_epoch_snippet(strm, fpos_epoch_snippet);
-                    VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
-                    pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
+                    if (valid) {
+                        invalidate_epoch_snippet(strm, fpos_epoch_snippet);
+                        fixed++;
+                        VLOG_LP(0) << "marked invalid " << p << " at offset " << fpos_epoch_snippet;
+                        // quitting loop just after this, so no need to change 'valid', but...
+                        valid = false;
+                        VLOG_LP(45) << "valid: false";
+                    }
+                    if (pe.value() < parse_error::broken_after_marked) {
+                        pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
+                    }
                     break;
                 case process_at_damaged::repair_by_cut:
                     pe = parse_error(parse_error::broken_after_tobe_cut, fpos_epoch_snippet);
@@ -370,8 +405,15 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
                     if (valid) {
                         // durable broken data, serious
                         report_error(ec);
+                        pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
+                    } else if (marked_before_scan) {
+                        if (pe.value() < parse_error::broken_after_marked) {
+                            pe = parse_error(parse_error::broken_after_marked, fpos_epoch_snippet);
+                        }
+                    } else {
+                        // marked during inspect
+                        pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
                     }
-                    pe = parse_error(parse_error::broken_after, fpos_epoch_snippet);
                 }
             }
             aborted = true;
@@ -395,7 +437,10 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
         boost::filesystem::resize_file(p, pe.fpos());
         VLOG_LP(0) << "trimmed " << p << " at offset " << pe.fpos();
         pe.value(parse_error::repaired);
+        fixed++;
     }
+    LOG(INFO) << "fixed: " << fixed;
+    pe.modified(fixed > 0);
     return max_epoch_of_file;
 }
 

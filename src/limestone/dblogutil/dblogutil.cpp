@@ -120,9 +120,8 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     std::atomic_size_t count_wal_entry = 0;
     dblog_scan::parse_error::code max_ec{};
     ds.scan_pwal_files(ld_epoch, [&count_wal_entry](log_entry&){ count_wal_entry++; }, [](log_entry::read_error& e) -> bool {
-        // no process_at_xxx is set to "report", so never reach here
         LOG_LP(ERROR) << "this pwal file is broken: " << e.message();
-        throw std::runtime_error("pwal file read error");
+        return false;
     }, &max_ec);
     VLOG(10) << "scan_pwal_files done, max_ec = " << max_ec;
     VLOG(10) << "count-durable-wal-entries: " << count_wal_entry;

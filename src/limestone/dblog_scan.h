@@ -57,6 +57,8 @@ public:
         void value(code value) noexcept { value_ = value; }
         [[nodiscard]] code value() const noexcept { return value_; }
         explicit operator bool() const noexcept { return value_ != ok; }
+        void modified(bool modified) noexcept { modified_ = modified; }
+        [[nodiscard]] bool modified() const noexcept { return modified_; }
 
         [[nodiscard]] std::streamoff fpos() const noexcept { return fpos_; }
 
@@ -75,6 +77,7 @@ public:
         }
     private:
         code value_;
+        bool modified_{false};
         std::streamoff fpos_{-1};
     };
 

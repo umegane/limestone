@@ -213,7 +213,7 @@ TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_truncated_invalidated_normal_
                                [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
         EXPECT_EQ(max_epoch, 0x101);
         // EXPECT_EQ(errors.size(), 1);  0 or 1 // ??
-        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
         EXPECT_EQ(pe.fpos(), 9);
     });
 }
@@ -225,7 +225,7 @@ TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_truncated_invalidated_epoch_h
                                [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
         EXPECT_EQ(max_epoch, 0xff);
         //EXPECT_EQ(errors.size(), 1);  // ?
-        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
         EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
     });
 }

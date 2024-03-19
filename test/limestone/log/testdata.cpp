@@ -74,6 +74,10 @@ extern constexpr const std::string_view data_truncated_invalidated_epoch_header 
     ""sv;
 static_assert(data_truncated_invalidated_epoch_header.at(50) == '\x06');
 
+extern constexpr const std::string_view data_allzero =
+    "\x00\x00\x00\x00\x00\x00\x00\x00\x00"  // UNKNOWN_TYPE_entry
+    ""sv;
+
 std::string data_manifest(int persistent_format_version = 1) {
     std::ostringstream ss;
     ss << "{ \"format_version\": \"1.0\", \"persistent_format_version\": " << persistent_format_version << " }";
