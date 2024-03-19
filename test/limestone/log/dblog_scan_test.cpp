@@ -64,6 +64,69 @@ static constexpr const char* location = "/tmp/dblog_scan_test";
         return ret;
     }
 
+    void scan_one_pwal_file_inspect(const std::string_view data, std::function<void(const boost::filesystem::path&, epoch_id_type, const std::vector<log_entry::read_error>&, const dblog_scan::parse_error&)> check) {
+        auto p = boost::filesystem::path(location) / "pwal_0000";
+        create_file(p, data);
+
+        dblog_scan ds{boost::filesystem::path(location)};
+        ds.set_thread_num(1);
+        set_inspect_mode(ds);
+        dblog_scan::parse_error pe;
+        std::vector<log_entry::read_error> errors;
+
+        epoch_id_type max_epoch = ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
+            VLOG(30) << static_cast<int>(e.type());
+        }, [&errors](const log_entry::read_error& re){
+            VLOG(30) << re.message();
+            errors.emplace_back(re);
+            return false;
+        }, pe);
+
+        check(p, max_epoch, errors, pe);
+    }
+
+    void scan_one_pwal_file_repairm(const std::string_view data, std::function<void(const boost::filesystem::path&, epoch_id_type, const std::vector<log_entry::read_error>&, const dblog_scan::parse_error&)> check) {
+        auto p = boost::filesystem::path(location) / "pwal_0000";
+        create_file(p, data);
+
+        dblog_scan ds{boost::filesystem::path(location)};
+        ds.set_thread_num(1);
+        set_repair_by_mark_mode(ds);
+        dblog_scan::parse_error pe;
+        std::vector<log_entry::read_error> errors;
+
+        epoch_id_type max_epoch = ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
+            VLOG(30) << static_cast<int>(e.type());
+        }, [&errors](const log_entry::read_error& re){
+            VLOG(30) << re.message();
+            errors.emplace_back(re);
+            return false;
+        }, pe);
+
+        check(p, max_epoch, errors, pe);
+    }
+
+    void scan_one_pwal_file_repairc(const std::string_view data, std::function<void(const boost::filesystem::path&, epoch_id_type, const std::vector<log_entry::read_error>&, const dblog_scan::parse_error&)> check) {
+        auto p = boost::filesystem::path(location) / "pwal_0000";
+        create_file(p, data);
+
+        dblog_scan ds{boost::filesystem::path(location)};
+        ds.set_thread_num(1);
+        set_repair_by_cut_mode(ds);
+        dblog_scan::parse_error pe;
+        std::vector<log_entry::read_error> errors;
+
+        epoch_id_type max_epoch = ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
+            VLOG(30) << static_cast<int>(e.type());
+        }, [&errors](const log_entry::read_error& re){
+            VLOG(30) << re.message();
+            errors.emplace_back(re);
+            return false;
+        }, pe);
+
+        check(p, max_epoch, errors, pe);
+    }
+
 };
 
 // combination test
@@ -82,326 +145,158 @@ extern const std::string_view data_truncated_invalidated_epoch_header;
 // unit-test scan_one_pwal_file
 // inspect the normal file; returns ok
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_normal) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_normal);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x100);
-    EXPECT_EQ(errors.size(), 0);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::ok);
+    scan_one_pwal_file_inspect(data_normal,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x100);
+        EXPECT_EQ(errors.size(), 0);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::ok);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // inspect the file including nondurable epoch snippet
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_nondurable) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_nondurable);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(errors.size(), 1);  // nondurable
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::nondurable_entries);
+    scan_one_pwal_file_inspect(data_nondurable,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(errors.size(), 1);  // nondurable
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::nondurable_entries);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // inspect the file filled zero
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_zerofill) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_zerofill);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(errors.size(), 1);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_inspect(data_zerofill,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(errors.size(), 1);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.fpos(), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // inspect the file truncated on log_entries
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_truncated_normal_entry) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_normal_entry);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    //EXPECT_EQ(errors.size(), 1);  // nondurable
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_inspect(data_truncated_normal_entry,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        //EXPECT_EQ(errors.size(), 1);  // nondurable
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.fpos(), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // inspect the file truncated on epoch_snippet_header
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_truncated_epoch_header) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_epoch_header);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0xff);
-    EXPECT_EQ(errors.size(), 1);  // truncated
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
-    EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    scan_one_pwal_file_inspect(data_truncated_epoch_header,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0xff);
+        EXPECT_EQ(errors.size(), 1);  // truncated
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    });
 }
 
 // unit-test scan_one_pwal_file
 // inspect the file truncated on log_entries in invalidated epoch snippet
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_truncated_invalidated_normal_entry) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_invalidated_normal_entry);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    // EXPECT_EQ(errors.size(), 1);  0 or 1 // ??
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_inspect(data_truncated_invalidated_normal_entry,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        // EXPECT_EQ(errors.size(), 1);  0 or 1 // ??
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.fpos(), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // inspect the file truncated on invalidated epoch_snippet_header
 TEST_F(dblog_scan_test, scan_one_pwal_file_inspect_truncated_invalidated_epoch_header) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_invalidated_epoch_header);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_inspect_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0xff);
-    //EXPECT_EQ(errors.size(), 1);  // ?
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
-    EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    scan_one_pwal_file_inspect(data_truncated_invalidated_epoch_header,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0xff);
+        //EXPECT_EQ(errors.size(), 1);  // ?
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after);
+        EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the normal file; returns ok
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_normal) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_normal);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x100);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::ok);
+    scan_one_pwal_file_repairm(data_normal,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x100);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::ok);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the file including nondurable epoch snippet
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_nondurable) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_nondurable);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+    scan_one_pwal_file_repairm(data_nondurable,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the file filled zero
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_zerofill) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_zerofill);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_repairm(data_zerofill,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
+        EXPECT_EQ(pe.fpos(), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the file truncated on log_entries
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_truncated_normal_entry) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_normal_entry);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_repairm(data_truncated_normal_entry,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
+        EXPECT_EQ(pe.fpos(), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the file truncated on epoch_snippet_header
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_truncated_epoch_header) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_epoch_header);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0xff);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
-    EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    scan_one_pwal_file_repairm(data_truncated_epoch_header,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0xff);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
+        EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the file truncated on log_entries in invalidated epoch snippet
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_truncated_invalidated_normal_entry) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_invalidated_normal_entry);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_repairm(data_truncated_invalidated_normal_entry,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
+        EXPECT_EQ(pe.fpos(), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(mark) the file truncated on invalidated epoch_snippet_header
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_truncated_invalidated_epoch_header) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_epoch_header);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_mark_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0xff);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
-    EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    scan_one_pwal_file_repairm(data_truncated_epoch_header,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0xff);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::broken_after_marked);
+        EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    });
 }
 
 // unit-test scan_one_pwal_file
@@ -414,119 +309,61 @@ TEST_F(dblog_scan_test, scan_one_pwal_file_repairm_truncated_invalidated_epoch_h
 // unit-test scan_one_pwal_file
 // repair(mark) the file filled zero
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairc_zerofill) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_zerofill);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_cut_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
-    EXPECT_EQ(pe.fpos(), 9);
-    EXPECT_EQ(boost::filesystem::file_size(p), 9);
+    scan_one_pwal_file_repairc(data_zerofill,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+        EXPECT_EQ(pe.fpos(), 9);
+        EXPECT_EQ(boost::filesystem::file_size(p), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(cut) the file truncated on log_entries
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairc_truncated_normal_entry) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_normal_entry);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_cut_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
-    EXPECT_EQ(pe.fpos(), 9);
-    EXPECT_EQ(boost::filesystem::file_size(p), 9);
+    scan_one_pwal_file_repairc(data_truncated_normal_entry,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+        EXPECT_EQ(pe.fpos(), 9);
+        EXPECT_EQ(boost::filesystem::file_size(p), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(cut) the file truncated on epoch_snippet_header
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairc_truncated_epoch_header) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_epoch_header);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_cut_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0xff);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
-    EXPECT_EQ(pe.fpos(), 50);
-    EXPECT_EQ(boost::filesystem::file_size(p), 50);
+    scan_one_pwal_file_repairc(data_truncated_epoch_header,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0xff);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+        EXPECT_EQ(pe.fpos(), 50);
+        EXPECT_EQ(boost::filesystem::file_size(p), 50);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(cut) the file truncated on log_entries in invalidated epoch snippet
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairc_truncated_invalidated_normal_entry) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_invalidated_normal_entry);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_cut_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0x101);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
-    EXPECT_EQ(pe.fpos(), 9);
+    scan_one_pwal_file_repairc(data_truncated_invalidated_normal_entry,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0x101);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+        EXPECT_EQ(pe.fpos(), 9);
+        EXPECT_EQ(boost::filesystem::file_size(p), 9);
+    });
 }
 
 // unit-test scan_one_pwal_file
 // repair(cut) the file truncated on invalidated epoch_snippet_header
 TEST_F(dblog_scan_test, scan_one_pwal_file_repairc_truncated_invalidated_epoch_header) {
-    auto p = boost::filesystem::path(location) / "pwal_0000";
-    create_file(p, data_truncated_epoch_header);
-
-    dblog_scan ds{boost::filesystem::path(location)};
-    ds.set_thread_num(1);
-    set_repair_by_cut_mode(ds);
-    dblog_scan::parse_error pe;
-    std::vector<log_entry::read_error> errors;
-
-    EXPECT_EQ(ds.scan_one_pwal_file(p, 0x100, [](const log_entry& e){
-        VLOG(30) << static_cast<int>(e.type());
-    }, [&errors](log_entry::read_error& re){
-        VLOG(30) << re.message();
-        errors.emplace_back(re);
-        return false;
-    }, pe), 0xff);
-    EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
-    EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+    scan_one_pwal_file_repairc(data_truncated_epoch_header,
+                               [](const boost::filesystem::path& p, epoch_id_type max_epoch, const std::vector<log_entry::read_error>& errors, const dblog_scan::parse_error& pe) {
+        EXPECT_EQ(max_epoch, 0xff);
+        EXPECT_EQ(pe.value(), dblog_scan::parse_error::repaired);
+        EXPECT_EQ(pe.fpos(), 50);  // after correct epoch snippet
+        EXPECT_EQ(boost::filesystem::file_size(p), 50);
+    });
 }
 
 // unit-test detach_wal_files; normal non-detached pwal files are renamed (rotated)
