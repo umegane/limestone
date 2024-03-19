@@ -181,7 +181,8 @@ int main(int argc, char *argv[]) {  // NOLINT
     google::InitGoogleLogging(arg0);
     subcommand mode{};
     auto usage = [&arg0]() {
-        std::cout << "usage: " << arg0 << " {inspect | repair} [options] <dblogdir>" << std::endl;
+        //std::cout << "usage: " << arg0 << " {inspect | repair} [options] <dblogdir>" << std::endl;
+        std::cout << "usage: " << arg0 << " repair [options] <dblogdir>" << std::endl;
         log_and_exit(100);
     };
     if (argc < 3) {
@@ -190,6 +191,7 @@ int main(int argc, char *argv[]) {  // NOLINT
     }
     const char *arg1 = argv[1];  // NOLINT(*-pointer-arithmetic)
     if (strcmp(arg1, "inspect") == 0) {
+        LOG(WARNING) << "WARNING: subcommand 'inspect' is under development";
         mode = cmd_inspect;
     } else if (strcmp(arg1, "repair") == 0) {
         mode = cmd_repair;
