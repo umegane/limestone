@@ -40,18 +40,13 @@ public:
     class parse_error {
     public:
         enum code {
-            ok = 0,
-            repaired = 1,
-            // warning; pending repair (cut) (inner-code, do not expose out of parse-func)
-            broken_after_tobe_cut = 0x8,
-            // warning; repaired, but tail is still broken, so do not append to this file
-            broken_after_marked = 0x11,
-            // error; nondurable snippets exist
-            nondurable_entries = 0x40,
-            // error; tail is broken, not repaired yet (but can repair)
-            broken_after = 0x41,
-            // error; unexpected (formal) entry, maybe logic error
-            unexpected = 0x81,
+            ok = 0,                         // ok; no error at all
+            repaired = 1,                   // ok; repaired
+            broken_after_tobe_cut = 0x8,    // warning; pending repair (cut) (inner-code, do not expose out of parse-func)
+            broken_after_marked = 0x11,     // warning; repaired, but tail is still broken, so do not append to this file
+            nondurable_entries = 0x40,      // error; nondurable (formal (not short) and alive (not invalidated)) snippets exist, so need to mark invalidated
+            broken_after = 0x41,            // error; tail is broken, not repaired yet (but can repair)
+            unexpected = 0x81,              // error; unexpected (formal) entry, maybe logic error
             failed = 0xff,
         };
 

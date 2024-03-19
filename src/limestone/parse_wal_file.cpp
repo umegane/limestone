@@ -187,9 +187,10 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
 
     log_entry e;
     auto err_unexpected = [&](){
-        ec.value(log_entry::read_error::unexpected_type);
-        ec.entry_type(e.type());
-        report_error(ec);
+        log_entry::read_error ectmp{};
+        ectmp.value(log_entry::read_error::unexpected_type);
+        ectmp.entry_type(e.type());
+        report_error(ectmp);
     };
     boost::filesystem::fstream strm;
     strm.open(p, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
