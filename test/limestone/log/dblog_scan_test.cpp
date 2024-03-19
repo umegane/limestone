@@ -17,7 +17,7 @@ using namespace std::literals;
 using namespace limestone::api;
 using namespace limestone::internal;
 
-extern void create_file(boost::filesystem::path path, std::string_view content);
+extern void create_file(const boost::filesystem::path& path, std::string_view content);
 
 class dblog_scan_test : public ::testing::Test {
 public:
@@ -71,57 +71,13 @@ static constexpr const char* location = "/tmp/dblog_scan_test";
 //   x
 // {normal, nondurable, zerofill, truncated_normal_entry, truncated_epoch_header, truncated_invalidated_normal_entry, truncated_invalidated_epoch_header}
 
-static std::string_view data_normal =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    // XXX: epoch footer...
-    "\x02\x00\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x100
-    // XXX: epoch footer...
-    ""sv;
-
-static std::string_view data_nondurable =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    // XXX: epoch footer...
-    "\x02\x01\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x101 (nondurable)
-    // XXX: epoch footer...
-    ""sv;
-
-static std::string_view data_zerofill =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    // XXX: epoch footer...
-    "\x02\x01\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x101
-    // XXX: epoch footer...
-    "\x00\x00\x00\x00\x00\x00\x00\x00\x00"  // UNKNOWN_TYPE_entry
-    ""sv;
-
-static std::string_view data_truncated_normal_entry =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    // XXX: epoch footer...
-    "\x02\x01\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x101
-    "\x01\x04\x00\x00\x00\x04\x00\x00\x00"  // SHORT_normal_entry
-    ""sv;
-
-static std::string_view data_truncated_epoch_header =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1234" "vermajor" "verminor" "1234"  // normal_entry
-    // XXX: epoch footer...
-    // offset 50
-    "\x02\x01\x01\x00\x00\x00\x00\x00"  // SHORT_marker_begin
-    ""sv;
-
-static std::string_view data_truncated_invalidated_normal_entry =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    // XXX: epoch footer...
-    "\x06\x01\x01\x00\x00\x00\x00\x00\x00"  // marker_invalidated_begin 0x101
-    "\x01\x04\x00\x00\x00\x04\x00\x00\x00"  // SHORT_normal_entry
-    ""sv;
-
-static std::string_view data_truncated_invalidated_epoch_header =
-    "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
-    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1234" "vermajor" "verminor" "1234"  // normal_entry
-    // XXX: epoch footer...
-    // offset 50
-    "\x06\x01\x01\x00\x00\x00\x00\x00"  // SHORT_marker_inv_begin
-    ""sv;
+extern const std::string_view data_normal;
+extern const std::string_view data_nondurable;
+extern const std::string_view data_zerofill;
+extern const std::string_view data_truncated_normal_entry;
+extern const std::string_view data_truncated_epoch_header;
+extern const std::string_view data_truncated_invalidated_normal_entry;
+extern const std::string_view data_truncated_invalidated_epoch_header;
 
 // unit-test scan_one_pwal_file
 // inspect the normal file; returns ok

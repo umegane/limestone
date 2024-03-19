@@ -14,14 +14,17 @@ using dblog_scan = limestone::internal::dblog_scan;
 
 namespace limestone::testing {
 
-extern void create_file(boost::filesystem::path path, std::string_view content);
+extern void create_file(const boost::filesystem::path& path, std::string_view content);
+extern const std::string_view epoch_0_str;
+extern const std::string_view epoch_0x100_str;
+extern std::string data_manifest(int persistent_format_version = 1);
+extern const std::string_view data_normal;
+extern const std::string_view data_nondurable;
 
 class log_dir_test : public ::testing::Test {
 public:
 static constexpr const char* location = "/tmp/log_dir_test";
 const boost::filesystem::path manifest_path = boost::filesystem::path(location) / std::string(limestone::internal::manifest_file_name);
-static constexpr const std::string_view epoch_0_str = "\x04\x00\x00\x00\x00\x00\x00\x00\x00"sv;
-static_assert(epoch_0_str.length() == 9);
 
     void SetUp() {
         boost::filesystem::remove_all(location);
@@ -49,7 +52,7 @@ static_assert(epoch_0_str.length() == 9);
     static void ignore_entry(limestone::api::log_entry&) {}
 
     void create_mainfest_file(int persistent_format_version = 1) {
-        create_file(manifest_path, "{ \"format_version\": \"1.0\", \"persistent_format_version\": " + std::to_string(persistent_format_version) + " }");
+        create_file(manifest_path, data_manifest(persistent_format_version));
     }
 
 protected:
@@ -122,8 +125,7 @@ TEST_F(log_dir_test, rotate_old_ok_v1_dir) {
         LOG(FATAL) << "cannot make directory";
     }
     create_file(bk_path / "epoch", epoch_0_str);
-    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
-                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name), data_manifest(1));
 
     gen_datastore();
 
@@ -137,8 +139,7 @@ TEST_F(log_dir_test, rotate_old_rejects_unsupported_data) {
         LOG(FATAL) << "cannot make directory";
     }
     create_file(bk_path / "epoch", epoch_0_str);
-    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
-                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name), data_manifest(2));
 
     gen_datastore();
 
@@ -180,8 +181,7 @@ TEST_F(log_dir_test, rotate_prusik_ok_v1_dir) {
         LOG(FATAL) << "cannot make directory";
     }
     create_file(bk_path / "epoch", epoch_0_str);
-    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
-                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name), data_manifest(1));
     // setup entries
     std::vector<limestone::api::file_set_entry> entries;
     entries.emplace_back("epoch", "epoch", false);
@@ -199,8 +199,7 @@ TEST_F(log_dir_test, rotate_prusik_rejects_unsupported_data) {
         LOG(FATAL) << "cannot make directory";
     }
     create_file(bk_path / "epoch", epoch_0_str);
-    create_file(bk_path / std::string(limestone::internal::manifest_file_name),
-                "{ \"format_version\": \"1.0\", \"persistent_format_version\": 2 }");
+    create_file(bk_path / std::string(limestone::internal::manifest_file_name), data_manifest(2));
     // setup entries
     std::vector<limestone::api::file_set_entry> entries;
     entries.emplace_back("epoch", "epoch", false);
@@ -248,13 +247,8 @@ TEST_F(log_dir_test, rotate_prusik_rejects_corrupted_dir) {
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_normal) {
     create_mainfest_file();  // not used
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
-    create_file(boost::filesystem::path(location) / "pwal_0000",
-                "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
-                // XXX: epoch footer...
-                "\x02\x00\x01\x00\x00\x00\x00\x00\x00"
-                // XXX: epoch footer...
-                ""sv);
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0x100_str);  // not used
+    create_file(boost::filesystem::path(location) / "pwal_0000", data_normal);
 
     // gen_datastore();
     // EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x100);
@@ -265,13 +259,8 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_normal) {
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
     create_mainfest_file();  // not used
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
-    create_file(boost::filesystem::path(location) / "pwal_0000",
-                "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
-                // XXX: epoch footer...
-                "\x02\x01\x01\x00\x00\x00\x00\x00\x00"
-                // XXX: epoch footer...
-                ""sv);
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0x100_str);  // not used
+    create_file(boost::filesystem::path(location) / "pwal_0000", data_nondurable);
 
     // gen_datastore();
     // EXPECT_EQ(limestone::internal::scan_pwal_files_in_dir(location, 2, is_pwal, 0x100, ignore_entry), 0x101);
@@ -282,7 +271,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_returns_max_epoch_nondurable) {
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
     create_mainfest_file();  // not used
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0x100_str);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
                 "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
                 // XXX: epoch footer...
@@ -302,7 +291,7 @@ TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpected_EOF) {
 
 TEST_F(log_dir_test, scan_pwal_files_in_dir_rejects_unexpeced_zeros) {
     create_mainfest_file();  // not used
-    create_file(boost::filesystem::path(location) / "epoch", "\x04\x00\x01\x00\x00\x00\x00\x00\x00"sv);  // not used
+    create_file(boost::filesystem::path(location) / "epoch", epoch_0x100_str);  // not used
     create_file(boost::filesystem::path(location) / "pwal_0000",
                 "\x02\xff\x00\x00\x00\x00\x00\x00\x00"
                 // XXX: epoch footer...

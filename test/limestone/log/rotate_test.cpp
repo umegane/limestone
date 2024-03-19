@@ -49,14 +49,8 @@ protected:
     std::unique_ptr<limestone::api::datastore_test> datastore_{};
 };
 
-void create_file(boost::filesystem::path path, std::string_view content) {
-    boost::filesystem::ofstream strm{};
-    strm.open(path, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
-    strm.write(content.data(), content.size());
-    strm.flush();
-    ASSERT_FALSE(!strm || !strm.is_open() || strm.bad() || strm.fail());
-    strm.close();
-}
+extern void create_file(const boost::filesystem::path& path, std::string_view content);
+extern std::string data_manifest(int persistent_format_version = 1);
 
 TEST_F(rotate_test, log_is_rotated) { // NOLINT
     using namespace limestone::api;
@@ -255,7 +249,7 @@ TEST_F(rotate_test, restore_prusik_all_abs) { // NOLINT
     auto conffn = std::string(limestone::internal::manifest_file_name);
     auto confd = location_path / "bk0";
     boost::filesystem::create_directories(confd);
-    create_file(confd / conffn, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    create_file(confd / conffn, data_manifest(1));
     data.emplace_back(confd / conffn, conffn, false);
 #endif
 
@@ -305,7 +299,7 @@ TEST_F(rotate_test, restore_prusik_all_rel) { // NOLINT
     std::string conffn(limestone::internal::manifest_file_name);
     auto confd = location_path / "bk0";
     boost::filesystem::create_directories(confd);
-    create_file(confd / conffn, "{ \"format_version\": \"1.0\", \"persistent_format_version\": 1 }");
+    create_file(confd / conffn, data_manifest(1));
     data.emplace_back("bk0/" + conffn, conffn, false);
 #endif
 
