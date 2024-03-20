@@ -27,10 +27,34 @@ extern constexpr const std::string_view data_normal =
     // XXX: epoch footer...
     ""sv;
 
+extern constexpr const std::string_view data_normal2 =
+    "\x02\xf0\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xf0
+    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1234" "vermajor" "verminor" "1234"  // normal_entry
+    // XXX: epoch footer...
+    "\x02\xf1\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xf1
+    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1235" "vermajor" "verminor" "1235"  // normal_entry
+    // XXX: epoch footer...
+    "\x02\x00\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x100
+    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1236" "vermajor" "verminor" "1236"  // normal_entry
+    // XXX: epoch footer...
+    ""sv;
+
 extern constexpr const std::string_view data_nondurable =
     "\x02\xff\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xff
     // XXX: epoch footer...
     "\x02\x01\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x101 (nondurable)
+    // XXX: epoch footer...
+    ""sv;
+
+extern constexpr const std::string_view data_repaired_nondurable =
+    "\x02\xf0\x00\x00\x00\x00\x00\x00\x00"  // marker_begin 0xf0
+    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1234" "vermajor" "verminor" "1234"  // normal_entry
+    // XXX: epoch footer...
+    "\x06\xf1\x00\x00\x00\x00\x00\x00\x00"  // marker_invalidated_begin 0xf1
+    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1235" "vermajor" "verminor" "1235"  // normal_entry
+    // XXX: epoch footer...
+    "\x02\x00\x01\x00\x00\x00\x00\x00\x00"  // marker_begin 0x100
+    "\x01\x04\x00\x00\x00\x04\x00\x00\x00" "storage1" "1236" "vermajor" "verminor" "1236"  // normal_entry
     // XXX: epoch footer...
     ""sv;
 
