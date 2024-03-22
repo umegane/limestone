@@ -439,7 +439,7 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
         pe.value(parse_error::repaired);
         fixed++;
     }
-    LOG(INFO) << "fixed: " << fixed;
+    VLOG_LP(30) << "fixed: " << fixed;
     pe.modified(fixed > 0);
     return max_epoch_of_file;
 }
