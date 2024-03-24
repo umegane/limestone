@@ -176,6 +176,26 @@ static constexpr const char* location = "/tmp/dblogutil_test";
         return std::make_tuple(rc, out, rc2, out2);
     }
 
+    void expect_no_change(std::string_view& from) {
+        auto to = read_entire_file(list_dir()[0]);
+        EXPECT_EQ(from, to);  // no change
+    }
+
+    void expect_mark_at(std::size_t offset, std::string_view& from) {
+        auto to = read_entire_file(list_dir()[0]);
+        ASSERT_EQ(from.at(offset), '\x02');
+        EXPECT_EQ(to.at(offset), '\x06');  // marked
+        EXPECT_EQ(from.substr(0, offset), to.substr(0, offset));  // no change before mark
+        EXPECT_EQ(from.substr(offset + 1), to.substr(offset + 1));
+    }
+
+    void expect_cut_at(std::size_t offset, std::string_view& from) {
+        auto to = read_entire_file(list_dir()[0]);
+        ASSERT_TRUE(from.at(offset) == '\x02' || from.at(offset) == '\x06');
+        EXPECT_EQ(to.size(), offset);  // cut
+        EXPECT_EQ(from.substr(0, offset), to.substr(0, offset));  // no change before cut
+    }
+
 };
 
 TEST_F(dblogutil_test, inspect_normal) {
@@ -245,8 +265,7 @@ TEST_F(dblogutil_test, repairm_normal) {
     auto [rc, out] = repairm("pwal_0000", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: OK"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before mark
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_nondurable) {
@@ -256,10 +275,7 @@ TEST_F(dblogutil_test, repairm_nondurable) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(9), '\x02');
-    EXPECT_EQ(data.at(9), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 9), orig_data.substr(0, 9));  // no change before mark
+    expect_mark_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_nondurable_detached) {
@@ -267,10 +283,7 @@ TEST_F(dblogutil_test, repairm_nondurable_detached) {
     auto [rc, out] = repairm("pwal_0000.rotated", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(9), '\x02');
-    EXPECT_EQ(data.at(9), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 9), orig_data.substr(0, 9));  // no change before mark
+    expect_mark_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_repaired_nondurable) {
@@ -278,8 +291,7 @@ TEST_F(dblogutil_test, repairm_repaired_nondurable) {
     auto [rc, out] = repairm("pwal_0000", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: OK"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before repair
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_zerofill) {
@@ -289,10 +301,7 @@ TEST_F(dblogutil_test, repairm_zerofill) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(9), '\x02');
-    EXPECT_EQ(data.at(9), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 9), orig_data.substr(0, 9));  // no change before mark
+    expect_mark_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_zerofill_detached) {
@@ -300,10 +309,7 @@ TEST_F(dblogutil_test, repairm_zerofill_detached) {
     auto [rc, out] = repairm("pwal_0000.rotated", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(9), '\x02');
-    EXPECT_EQ(data.at(9), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 9), orig_data.substr(0, 9));  // no change before mark
+    expect_mark_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_normal_entry) {
@@ -313,10 +319,7 @@ TEST_F(dblogutil_test, repairm_truncated_normal_entry) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(9), '\x02');
-    EXPECT_EQ(data.at(9), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 9), orig_data.substr(0, 9));  // no change before mark
+    expect_mark_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_normal_entry_detached) {
@@ -324,10 +327,7 @@ TEST_F(dblogutil_test, repairm_truncated_normal_entry_detached) {
     auto [rc, out] = repairm("pwal_0000.rotated", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(9), '\x02');
-    EXPECT_EQ(data.at(9), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 9), orig_data.substr(0, 9));  // no change before mark
+    expect_mark_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_epoch_header) {
@@ -337,10 +337,7 @@ TEST_F(dblogutil_test, repairm_truncated_epoch_header) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(50), '\x02');
-    EXPECT_EQ(data.at(50), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 50), orig_data.substr(0, 50));  // no change before mark
+    expect_mark_at(50, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_epoch_header_detached) {
@@ -348,10 +345,7 @@ TEST_F(dblogutil_test, repairm_truncated_epoch_header_detached) {
     auto [rc, out] = repairm("pwal_0000.rotated", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    ASSERT_EQ(orig_data.at(50), '\x02');
-    EXPECT_EQ(data.at(50), '\x06');  // marked
-    EXPECT_EQ(data.substr(0, 50), orig_data.substr(0, 50));  // no change before mark
+    expect_mark_at(50, orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_invalidated_normal_entry) {
@@ -359,8 +353,7 @@ TEST_F(dblogutil_test, repairm_truncated_invalidated_normal_entry) {
     auto [rc, out] = repairm("pwal_0000", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: OK"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before repair
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_invalidated_normal_entry_detached) {
@@ -368,8 +361,7 @@ TEST_F(dblogutil_test, repairm_truncated_invalidated_normal_entry_detached) {
     auto [rc, out] = repairm("pwal_0000.rotated", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: OK"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before mark
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_invalidated_epoch_header) {
@@ -377,8 +369,7 @@ TEST_F(dblogutil_test, repairm_truncated_invalidated_epoch_header) {
     auto [rc, out] = repairm("pwal_0000", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: OK"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before repair
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_truncated_invalidated_epoch_header_detached) {
@@ -386,8 +377,7 @@ TEST_F(dblogutil_test, repairm_truncated_invalidated_epoch_header_detached) {
     auto [rc, out] = repairm("pwal_0000.rotated", orig_data);
     EXPECT_EQ(rc, 0);
     EXPECT_NE(out.find("\n" "status: OK"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before repair
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairm_allzero) {
@@ -395,8 +385,7 @@ TEST_F(dblogutil_test, repairm_allzero) {
     auto [rc, out] = repairm("pwal_0000", orig_data);
     EXPECT_EQ(rc, 1 << 8);
     EXPECT_NE(out.find("\n" "status: unrepairable"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before repair
+    expect_no_change(orig_data);
 }
 
 TEST_F(dblogutil_test, repairc_zerofill) {
@@ -406,9 +395,7 @@ TEST_F(dblogutil_test, repairc_zerofill) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data.size(), 9);  // cut
-    EXPECT_EQ(data, orig_data.substr(0, 9));  // no change before cut
+    expect_cut_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairc_truncated_normal_entry) {
@@ -418,9 +405,7 @@ TEST_F(dblogutil_test, repairc_truncated_normal_entry) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data.size(), 9);  // cut
-    EXPECT_EQ(data, orig_data.substr(0, 9));  // no change before cut
+    expect_cut_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairc_truncated_epoch_header) {
@@ -430,9 +415,7 @@ TEST_F(dblogutil_test, repairc_truncated_epoch_header) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data.size(), 50);  // cut
-    EXPECT_EQ(data, orig_data.substr(0, 50));  // no change before cut
+    expect_cut_at(50, orig_data);
 }
 
 TEST_F(dblogutil_test, repairc_truncated_invalidated_normal_entry) {
@@ -442,9 +425,7 @@ TEST_F(dblogutil_test, repairc_truncated_invalidated_normal_entry) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data.size(), 9);  // cut
-    EXPECT_EQ(data, orig_data.substr(0, 9));  // no change before cut
+    expect_cut_at(9, orig_data);
 }
 
 TEST_F(dblogutil_test, repairc_truncated_invalidated_epoch_header) {
@@ -454,9 +435,7 @@ TEST_F(dblogutil_test, repairc_truncated_invalidated_epoch_header) {
     EXPECT_NE(out.find("\n" "status: repaired"), out.npos);
     EXPECT_EQ(rc2, 0);
     EXPECT_NE(out2.find("\n" "status: OK"), out2.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data.size(), 50);  // cut
-    EXPECT_EQ(data, orig_data.substr(0, 50));  // no change before cut
+    expect_cut_at(50, orig_data);
 }
 
 TEST_F(dblogutil_test, repairc_allzero) {
@@ -464,8 +443,7 @@ TEST_F(dblogutil_test, repairc_allzero) {
     auto [rc, out] = repairc("pwal_0000", orig_data);
     EXPECT_EQ(rc, 1 << 8);
     EXPECT_NE(out.find("\n" "status: unrepairable"), out.npos);
-    auto data = read_entire_file(list_dir()[0]);
-    EXPECT_EQ(data, orig_data);  // no change before repair
+    expect_no_change(orig_data);
 }
 
 }  // namespace limestone::testing
