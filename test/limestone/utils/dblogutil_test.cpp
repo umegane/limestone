@@ -34,7 +34,7 @@ extern const std::string_view data_truncated_invalidated_normal_entry;
 extern const std::string_view data_truncated_invalidated_epoch_header;
 extern const std::string_view data_allzero;
 
-#define UTIL_COMMAND "../src/dblogutil"
+#define UTIL_COMMAND "../src/tglogutil"
 
 int invoke(const std::string& command, std::string& out) {
     FILE* fp;

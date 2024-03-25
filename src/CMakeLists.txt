@@ -70,4 +70,5 @@ target_include_directories(dblogutil
         PRIVATE ./limestone
         )
 target_link_libraries(dblogutil PRIVATE limestone-impl PRIVATE glog::glog gflags::gflags)
+set_target_properties(dblogutil PROPERTIES RUNTIME_OUTPUT_NAME "tglogutil")
 install_custom(dblogutil dblogutil)
