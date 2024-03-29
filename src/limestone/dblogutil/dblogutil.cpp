@@ -161,7 +161,8 @@ int main(char *dir, subcommand mode) {  // NOLINT
     }
     try {
         check_logdir_format(p);
-    } catch (std::runtime_error&) {
+    } catch (std::runtime_error& e) {
+        LOG(ERROR) << e.what();
         log_and_exit(64);
     }
     dblog_scan ds(p);

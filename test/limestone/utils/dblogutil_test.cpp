@@ -66,6 +66,7 @@ static constexpr const char* location = "/tmp/dblogutil_test";
     }
 
     bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; }
+    bool contains(std::string a, std::string b) { return a.find(b) != a.npos; }
 
     std::vector<boost::filesystem::path> list_dir() {
         std::vector<boost::filesystem::path> ret;
@@ -444,6 +445,47 @@ TEST_F(dblogutil_test, repairc_allzero) {
     EXPECT_EQ(rc, 1 << 8);
     EXPECT_NE(out.find("\n" "status: unrepairable"), out.npos);
     expect_no_change(orig_data);
+}
+
+TEST_F(dblogutil_test, repair_nonexistent) {
+    boost::filesystem::path dir{location};
+    dir /= "nonexistent";
+    std::string command;
+    command = UTIL_COMMAND " repair " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "not exist"));
+}
+
+TEST_F(dblogutil_test, repair_unreadable) {
+    // root can read directories w/o permissions
+    if (geteuid() == 0) { GTEST_SKIP() << "skip when run by root"; }
+
+    boost::filesystem::path dir{location};
+    dir /= "unreadable";
+    boost::filesystem::create_directory(dir);
+    boost::filesystem::permissions(dir, boost::filesystem::no_perms);  // drop dir permission
+    std::string command;
+    command = UTIL_COMMAND " repair " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "Permission denied"));
+    boost::filesystem::permissions(dir, boost::filesystem::owner_all);
+}
+
+TEST_F(dblogutil_test, repair_nondblogdir) {
+    boost::filesystem::path dir{location};  // assume empty dir
+    std::string command;
+    command = UTIL_COMMAND " repair " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "unsupport"));
 }
 
 }  // namespace limestone::testing
