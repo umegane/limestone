@@ -112,8 +112,16 @@ void datastore::create_snapshot() {
         num_worker = 1;
     }
     logscan.set_thread_num(num_worker);
-    epoch_id_type max_appeared_epoch = logscan.scan_pwal_files_throws(ld_epoch, add_entry);
-    epoch_id_informed_.store(max_appeared_epoch);
+    try {
+        epoch_id_type max_appeared_epoch = logscan.scan_pwal_files_throws(ld_epoch, add_entry);
+        epoch_id_informed_.store(max_appeared_epoch);
+    } catch (std::runtime_error& e) {
+        VLOG_LP(log_info) << "failed to scan pwal files: " << e.what();
+        LOG(ERROR) << "/:limestone recover process failed. (cause: corruption detected in transaction log data directory), "
+                   << "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/troubleshooting-guide.md";
+        LOG(ERROR) << "/:limestone dblogdir (transaction log directory): " << location_;
+        throw std::runtime_error("dblogdir is corrupted");
+    }
 
     boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));
     boost::system::error_code error;
