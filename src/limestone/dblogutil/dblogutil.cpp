@@ -151,7 +151,17 @@ int main(char *dir, subcommand mode) {  // NOLINT
     if (FLAGS_epoch.empty()) {
         opt_epoch = std::nullopt;
     } else {
-        opt_epoch = std::stoul(FLAGS_epoch);
+        std::size_t idx{};
+        bool error = false;
+        try {
+            opt_epoch = std::stoul(FLAGS_epoch, &idx);
+        } catch (std::exception& e) {
+            error = true;
+        }
+        if (error || FLAGS_epoch[idx] != '\0') {
+            LOG(ERROR) << "invalid value for --epoch option";
+            log_and_exit(64);
+        }
     }
     boost::filesystem::path p(dir);
     std::cout << "dblogdir: " << p << std::endl;
@@ -161,14 +171,14 @@ int main(char *dir, subcommand mode) {  // NOLINT
     }
     try {
         check_logdir_format(p);
+        dblog_scan ds(p);
+        ds.set_thread_num(FLAGS_thread_num);
+        if (mode == cmd_inspect) inspect(ds, opt_epoch);
+        if (mode == cmd_repair) repair(ds, opt_epoch);
     } catch (std::runtime_error& e) {
         LOG(ERROR) << e.what();
         log_and_exit(64);
     }
-    dblog_scan ds(p);
-    ds.set_thread_num(FLAGS_thread_num);
-    if (mode == cmd_inspect) inspect(ds, opt_epoch);
-    if (mode == cmd_repair) repair(ds, opt_epoch);
     return 0;
 }
 

@@ -488,4 +488,80 @@ TEST_F(dblogutil_test, repair_nondblogdir) {
     EXPECT_TRUE(contains(out, "unsupport"));
 }
 
+TEST_F(dblogutil_test, repair_cannot_rotate) {
+    // root can write directories w/o permissions
+    if (geteuid() == 0) { GTEST_SKIP() << "skip when run by root"; }
+
+    boost::filesystem::path dir{location};
+    dir /= "unwriteable";
+    boost::filesystem::create_directory(dir);
+    create_file(dir / "epoch", epoch_0x100_str);
+    create_file(dir / std::string(manifest_file_name), data_manifest());
+    create_file(dir / "pwal_0000", data_zerofill);
+    boost::filesystem::permissions(dir, boost::filesystem::owner_read | boost::filesystem::owner_exe);  // drop dir write permission
+    std::string command;
+    command = UTIL_COMMAND " repair " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "Permission denied"));
+    boost::filesystem::permissions(dir, boost::filesystem::owner_all);
+}
+
+TEST_F(dblogutil_test, repair_cannot_modify) {
+    // root can write directories w/o permissions
+    if (geteuid() == 0) { GTEST_SKIP() << "skip when run by root"; }
+
+    boost::filesystem::path dir{location};
+    dir /= "unwriteable";
+    auto pwal = dir / "pwal_0000.rotated";
+    boost::filesystem::create_directory(dir);
+    create_file(dir / "epoch", epoch_0x100_str);
+    create_file(dir / std::string(manifest_file_name), data_manifest());
+    create_file(pwal, data_zerofill);
+    boost::filesystem::permissions(pwal, boost::filesystem::owner_read);  // drop file write permission
+    std::string command;
+    command = UTIL_COMMAND " repair " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "Permission denied") || contains(out, "cannot open"));
+    boost::filesystem::permissions(dir, boost::filesystem::owner_all);
+}
+
+TEST_F(dblogutil_test, invalid_epoch_option1) {
+    boost::filesystem::path dir{location};
+    std::string command;
+    command = UTIL_COMMAND " repair --epoch=Z " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "invalid"));
+}
+
+TEST_F(dblogutil_test, invalid_epoch_option2) {
+    boost::filesystem::path dir{location};
+    std::string command;
+    command = UTIL_COMMAND " repair --epoch=0x100 " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "invalid"));
+}
+
+TEST_F(dblogutil_test, invalid_epoch_option3) {
+    boost::filesystem::path dir{location};
+    std::string command;
+    command = UTIL_COMMAND " repair --epoch=99999999999999999999 " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "invalid"));
+}
+
 }  // namespace limestone::testing

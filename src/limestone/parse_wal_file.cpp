@@ -196,8 +196,8 @@ epoch_id_type dblog_scan::scan_one_pwal_file(  // NOLINT(readability-function-co
     boost::filesystem::fstream strm;
     strm.open(p, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
     if (!strm) {
-        LOG_LP(ERROR) << "cannot read pwal file: " << p;
-        throw std::runtime_error("cannot read pwal file");
+        LOG_LP(ERROR) << "cannot open pwal file: " << p;
+        throw std::runtime_error("cannot open pwal file");
     }
     bool valid = true;  // scanning in the normal (not-invalidated) epoch snippet
     [[maybe_unused]]
