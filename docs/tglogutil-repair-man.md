@@ -26,7 +26,7 @@ Options:
 * 0: No errors
     * Repair process completed successfully
     * Nothing was done because the contents were already healthy before processing
-* 1: Error
+* 16: Error
     * Errors left unrepaired
 * 64 or more: Unable to handle
     * `dblogdir` does not exist

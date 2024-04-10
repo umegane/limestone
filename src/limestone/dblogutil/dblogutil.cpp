@@ -87,7 +87,7 @@ void inspect(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     case dblog_scan::parse_error::broken_after_marked:
     case dblog_scan::parse_error::nondurable_entries:
         std::cout << "status: auto-repairable" << std::endl;
-        log_and_exit(1);
+        log_and_exit(1);  // FIXME: conflicts with gflags error code
     case dblog_scan::parse_error::unexpected:
         std::cout << "status: unrepairable" << std::endl;
         log_and_exit(2);
@@ -139,7 +139,7 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     case dblog_scan::parse_error::nondurable_entries:
     case dblog_scan::parse_error::unexpected:
         std::cout << "status: unrepairable" << std::endl;
-        log_and_exit(1);
+        log_and_exit(16);
     case dblog_scan::parse_error::failed:
         std::cout << "status: cannot-check" << std::endl;
         log_and_exit(64);
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {  // NOLINT
     auto usage = [&arg0]() {
         //std::cout << "usage: " << arg0 << " {inspect | repair} [options] <dblogdir>" << std::endl;
         std::cout << "usage: " << arg0 << " repair [options] <dblogdir>" << std::endl;
-        log_and_exit(100);
+        log_and_exit(1);
     };
     if (argc < 3) {
         LOG(ERROR) << "missing parameters";

@@ -384,7 +384,7 @@ TEST_F(dblogutil_test, repairm_truncated_invalidated_epoch_header_detached) {
 TEST_F(dblogutil_test, repairm_allzero) {
     auto orig_data = data_allzero;
     auto [rc, out] = repairm("pwal_0000", orig_data);
-    EXPECT_EQ(rc, 1 << 8);
+    EXPECT_EQ(rc, 16 << 8);
     EXPECT_NE(out.find("\n" "status: unrepairable"), out.npos);
     expect_no_change(orig_data);
 }
@@ -442,7 +442,7 @@ TEST_F(dblogutil_test, repairc_truncated_invalidated_epoch_header) {
 TEST_F(dblogutil_test, repairc_allzero) {
     auto orig_data = data_allzero;
     auto [rc, out] = repairc("pwal_0000", orig_data);
-    EXPECT_EQ(rc, 1 << 8);
+    EXPECT_EQ(rc, 16 << 8);
     EXPECT_NE(out.find("\n" "status: unrepairable"), out.npos);
     expect_no_change(orig_data);
 }
