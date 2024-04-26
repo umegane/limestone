@@ -33,7 +33,11 @@ DEFINE_bool(cut, false, "repair by cutting for error-truncate and error-broken")
 DEFINE_string(rotate, "all", "rotate files");
 DEFINE_string(output_format, "human-readable", "format of output (human-readable/machine-readable)");
 
-enum subcommand { cmd_inspect, cmd_repair };
+enum subcommand {
+    cmd_inspect,
+    cmd_repair,
+    cmd_compaction,
+};
 
 void log_and_exit(int error) {
     VLOG(10) << "exiting with code " << error;
@@ -146,6 +150,10 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     }
 }
 
+void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
+    LOG(ERROR) << "unimplemented";
+}
+
 int main(char *dir, subcommand mode) {  // NOLINT
     std::optional<epoch_id_type> opt_epoch;
     if (FLAGS_epoch.empty()) {
@@ -175,6 +183,7 @@ int main(char *dir, subcommand mode) {  // NOLINT
         ds.set_thread_num(FLAGS_thread_num);
         if (mode == cmd_inspect) inspect(ds, opt_epoch);
         if (mode == cmd_repair) repair(ds, opt_epoch);
+        if (mode == cmd_compaction) compaction(ds, opt_epoch);
     } catch (std::runtime_error& e) {
         LOG(ERROR) << e.what();
         log_and_exit(64);
@@ -191,8 +200,8 @@ int main(int argc, char *argv[]) {  // NOLINT
     google::InitGoogleLogging(arg0);
     subcommand mode{};
     auto usage = [&arg0]() {
-        //std::cout << "usage: " << arg0 << " {inspect | repair} [options] <dblogdir>" << std::endl;
-        std::cout << "usage: " << arg0 << " repair [options] <dblogdir>" << std::endl;
+        //std::cout << "usage: " << arg0 << " {inspect | repair | compaction} [options] <dblogdir>" << std::endl;
+        std::cout << "usage: " << arg0 << " {repair | compaction} [options] <dblogdir>" << std::endl;
         log_and_exit(1);
     };
     if (argc < 3) {
@@ -205,6 +214,8 @@ int main(int argc, char *argv[]) {  // NOLINT
         mode = cmd_inspect;
     } else if (strcmp(arg1, "repair") == 0) {
         mode = cmd_repair;
+    } else if (strcmp(arg1, "compaction") == 0) {
+        mode = cmd_compaction;
     } else {
         LOG(ERROR) << "unknown subcommand: " << arg1;
         usage();
