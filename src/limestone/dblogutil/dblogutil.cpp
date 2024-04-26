@@ -27,8 +27,12 @@
 using namespace limestone::api;
 using namespace limestone::internal;
 
+// common options
 DEFINE_string(epoch, "", "specify valid epoch upper limit");
 DEFINE_int32(thread_num, 1, "specify thread num of scanning wal file");
+DEFINE_bool(h, false, "display help message");
+
+// inspect, repair
 DEFINE_bool(cut, false, "repair by cutting for error-truncate and error-broken");
 DEFINE_string(rotate, "all", "rotate files");
 DEFINE_string(output_format, "human-readable", "format of output (human-readable/machine-readable)");
@@ -194,6 +198,10 @@ int main(char *dir, subcommand mode) {  // NOLINT
 }
 
 int main(int argc, char *argv[]) {  // NOLINT
+    gflags::SetUsageMessage("Tsurugi dblog maintenance command\n\n"
+                            //"usage: tglogutil {inspect | repair | compaction} [options] <dblogdir>"
+                            "usage: tglogutil {repair | compaction} [options] <dblogdir>"
+                            );
     FLAGS_logtostderr = true;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     const char *arg0 = argv[0];  // NOLINT(*-pointer-arithmetic)
@@ -204,6 +212,10 @@ int main(int argc, char *argv[]) {  // NOLINT
         std::cout << "usage: " << arg0 << " {repair | compaction} [options] <dblogdir>" << std::endl;
         log_and_exit(1);
     };
+    if (FLAGS_h) {
+        gflags::ShowUsageWithFlags(arg0);
+        exit(1);
+    }
     if (argc < 3) {
         LOG(ERROR) << "missing parameters";
         usage();
