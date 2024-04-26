@@ -46,7 +46,7 @@ int invoke(const std::string& command, std::string& out) {
         ss.write(buf, rc);
     }
     out.assign(ss.str());
-    LOG(INFO) << "\n" << out;
+    LOG(INFO) << "command output:\n--begin\n" << out << "--end";
     return pclose(fp);
 }
 
@@ -67,6 +67,7 @@ static constexpr const char* location = "/tmp/dblogutil_test";
 
     bool starts_with(std::string a, std::string b) { return a.substr(0, b.length()) == b; }
     bool contains(std::string a, std::string b) { return a.find(b) != a.npos; }
+    bool contains_line_starts_with(std::string a, std::string b) { return starts_with(a, b) || contains(a, "\n" + b); }
 
     std::vector<boost::filesystem::path> list_dir() {
         std::vector<boost::filesystem::path> ret;
@@ -443,7 +444,7 @@ TEST_F(dblogutil_test, repairc_allzero) {
     auto orig_data = data_allzero;
     auto [rc, out] = repairc("pwal_0000", orig_data);
     EXPECT_EQ(rc, 16 << 8);
-    EXPECT_NE(out.find("\n" "status: unrepairable"), out.npos);
+    EXPECT_TRUE(contains_line_starts_with(out, "status: unrepairable"));
     expect_no_change(orig_data);
 }
 
@@ -455,7 +456,7 @@ TEST_F(dblogutil_test, repair_nonexistent) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "not exist"));
 }
 
@@ -472,7 +473,7 @@ TEST_F(dblogutil_test, repair_unreadable) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "Permission denied"));
     boost::filesystem::permissions(dir, boost::filesystem::owner_all);
 }
@@ -484,7 +485,7 @@ TEST_F(dblogutil_test, repair_nondblogdir) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "unsupport"));
 }
 
@@ -504,7 +505,7 @@ TEST_F(dblogutil_test, repair_cannot_rotate) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "Permission denied"));
     boost::filesystem::permissions(dir, boost::filesystem::owner_all);
 }
@@ -526,7 +527,7 @@ TEST_F(dblogutil_test, repair_cannot_modify) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "Permission denied") || contains(out, "cannot open"));
     boost::filesystem::permissions(dir, boost::filesystem::owner_all);
 }
@@ -538,7 +539,7 @@ TEST_F(dblogutil_test, invalid_epoch_option1) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "invalid"));
 }
 
@@ -549,7 +550,7 @@ TEST_F(dblogutil_test, invalid_epoch_option2) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "invalid"));
 }
 
@@ -560,7 +561,7 @@ TEST_F(dblogutil_test, invalid_epoch_option3) {
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 64 << 8);
-    EXPECT_TRUE(contains(out, "\n" "E") || out[0] == 'E');  // LOG(ERROR)
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
     EXPECT_TRUE(contains(out, "invalid"));
 }
 
