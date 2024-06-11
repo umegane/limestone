@@ -53,6 +53,39 @@ static int comp_twisted_key(const std::string_view& a, const std::string_view& b
     return std::memcmp(b.data(), a.data(), write_version_size);
 }
 
+[[maybe_unused]]
+static void insert_entry_or_update_to_max(sortdb_wrapper* sortdb, log_entry& e) {
+    bool need_write = true;
+    // skip older entry than already inserted
+    std::string value;
+    if (sortdb->get(e.key_sid(), &value)) {
+        write_version_type write_version;
+        e.write_version(write_version);
+        if (write_version < write_version_type(value.substr(1))) {
+            need_write = false;
+        }
+    }
+    if (need_write) {
+        std::string db_value;
+        db_value.append(1, static_cast<char>(e.type()));
+        db_value.append(e.value_etc());
+        sortdb->put(e.key_sid(), db_value);
+    }
+}
+
+[[maybe_unused]]
+static void insert_twisted_entry(sortdb_wrapper* sortdb, log_entry& e) {
+    // key_sid: storage_id[8] key[*], value_etc: epoch[8]LE minor_version[8]LE value[*], type: type[1]
+    // db_key: epoch[8]BE minor_version[8]BE storage_id[8] key[*], db_value: type[1] value[*]
+    std::string db_key(write_version_size + e.key_sid().size(), '\0');
+    store_bswap64_value(&db_key[0], &e.value_etc()[0]);  // NOLINT(readability-container-data-pointer)
+    store_bswap64_value(&db_key[8], &e.value_etc()[8]);
+    std::memcpy(&db_key[write_version_size], e.key_sid().data(), e.key_sid().size());
+    std::string db_value(1, static_cast<char>(e.type()));
+    db_value.append(e.value_etc().substr(write_version_size));
+    sortdb->put(db_key, db_value);
+}
+
 void datastore::create_snapshot() {
     auto& from_dir = location_;
 #if defined SORT_METHOD_PUT_ONLY
@@ -64,44 +97,11 @@ void datastore::create_snapshot() {
 
     epoch_id_type ld_epoch = logscan.last_durable_epoch_in_dir();
 
-    [[maybe_unused]]
-    auto insert_entry_or_update_to_max = [&sortdb](log_entry& e){
-        bool need_write = true;
-
-        // skip older entry than already inserted
-        std::string value;
-        if (sortdb->get(e.key_sid(), &value)) {
-            write_version_type write_version;
-            e.write_version(write_version);
-            if (write_version < write_version_type(value.substr(1))) {
-                need_write = false;
-            }
-        }
-
-        if (need_write) {
-            std::string db_value;
-            db_value.append(1, static_cast<char>(e.type()));
-            db_value.append(e.value_etc());
-            sortdb->put(e.key_sid(), db_value);
-        }
-    };
-    [[maybe_unused]]
-    auto insert_twisted_entry = [&sortdb](log_entry& e){
-        // key_sid: storage_id[8] key[*], value_etc: epoch[8]LE minor_version[8]LE value[*], type: type[1]
-        // db_key: epoch[8]BE minor_version[8]BE storage_id[8] key[*], db_value: type[1] value[*]
-        std::string db_key(write_version_size + e.key_sid().size(), '\0');
-        store_bswap64_value(&db_key[0], &e.value_etc()[0]);  // NOLINT(readability-container-data-pointer)
-        store_bswap64_value(&db_key[8], &e.value_etc()[8]);
-        std::memcpy(&db_key[write_version_size], e.key_sid().data(), e.key_sid().size());
-        std::string db_value(1, static_cast<char>(e.type()));
-        db_value.append(e.value_etc().substr(write_version_size));
-        sortdb->put(db_key, db_value);
-    };
 #if defined SORT_METHOD_PUT_ONLY
-    auto add_entry = insert_twisted_entry;
+    auto add_entry = [&sortdb](log_entry& e){insert_twisted_entry(sortdb.get(), e);};
     bool works_with_multi_thread = true;
 #else
-    auto add_entry = insert_entry_or_update_to_max;
+    auto add_entry = [&sortdb](log_entry& e){insert_entry_or_update_to_max(sortdb.get(), e);};
     bool works_with_multi_thread = false;
 #endif
 
