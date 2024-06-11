@@ -30,8 +30,7 @@
 #include "log_entry.h"
 #include "sortdb_wrapper.h"
 
-namespace limestone::api {
-using namespace limestone::internal;
+namespace limestone::internal {
 
 constexpr std::size_t write_version_size = sizeof(epoch_id_type) + sizeof(std::uint64_t);
 static_assert(write_version_size == 16);
@@ -86,14 +85,13 @@ static void insert_twisted_entry(sortdb_wrapper* sortdb, log_entry& e) {
     sortdb->put(db_key, db_value);
 }
 
-void datastore::create_snapshot() {
-    auto& from_dir = location_;
+static std::pair<epoch_id_type, std::unique_ptr<sortdb_wrapper>> create_sortdb_from_wals(const boost::filesystem::path& from_dir, int num_worker) {
 #if defined SORT_METHOD_PUT_ONLY
     auto sortdb = std::make_unique<sortdb_wrapper>(from_dir, comp_twisted_key);
 #else
     auto sortdb = std::make_unique<sortdb_wrapper>(from_dir);
 #endif
-    dblog_scan logscan{location_};
+    dblog_scan logscan{from_dir};
 
     epoch_id_type ld_epoch = logscan.last_durable_epoch_in_dir();
 
@@ -105,7 +103,6 @@ void datastore::create_snapshot() {
     bool works_with_multi_thread = false;
 #endif
 
-    int num_worker = recover_max_parallelism_;
     if (!works_with_multi_thread && num_worker > 1) {
         LOG(INFO) << "/:limestone:config:datastore this sort method does not work correctly with multi-thread, so force the number of recover process thread = 1";
         num_worker = 1;
@@ -113,15 +110,72 @@ void datastore::create_snapshot() {
     logscan.set_thread_num(num_worker);
     try {
         epoch_id_type max_appeared_epoch = logscan.scan_pwal_files_throws(ld_epoch, add_entry);
-        epoch_id_switched_.store(max_appeared_epoch);
-        epoch_id_informed_.store(max_appeared_epoch);
+        return {max_appeared_epoch, std::move(sortdb)};
     } catch (std::runtime_error& e) {
         VLOG_LP(log_info) << "failed to scan pwal files: " << e.what();
         LOG(ERROR) << "/:limestone recover process failed. (cause: corruption detected in transaction log data directory), "
                    << "see https://github.com/project-tsurugi/tsurugidb/blob/master/docs/troubleshooting-guide.md";
-        LOG(ERROR) << "/:limestone dblogdir (transaction log directory): " << location_;
+        LOG(ERROR) << "/:limestone dblogdir (transaction log directory): " << from_dir;
         throw std::runtime_error("dblogdir is corrupted");
     }
+}
+
+static void sortdb_foreach(sortdb_wrapper *sortdb, std::function<void(const std::string_view key, const std::string_view value)> write_snapshot_entry) {
+    static_assert(sizeof(log_entry::entry_type) == 1);
+#if defined SORT_METHOD_PUT_ONLY
+    sortdb->each([write_snapshot_entry, last_key = std::string{}](const std::string_view db_key, const std::string_view db_value) mutable {
+        // using the first entry in GROUP BY (original-)key
+        // NB: max versions comes first (by the custom-comparator)
+        std::string_view key(db_key.data() + write_version_size, db_key.size() - write_version_size);
+        if (key == last_key) {  // same (original-)key with prev
+            return; // skip
+        }
+        last_key.assign(key);
+
+        auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
+        switch (entry_type) {
+        case log_entry::entry_type::normal_entry: {
+            std::string value(write_version_size + db_value.size() - 1, '\0');
+            store_bswap64_value(&value[0], &db_key[0]);
+            store_bswap64_value(&value[8], &db_key[8]);
+            std::memcpy(&value[write_version_size], &db_value[1], db_value.size() - 1);
+            write_snapshot_entry(key, value);
+            break;
+        }
+        case log_entry::entry_type::remove_entry:
+            break;  // skip
+        default:
+            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
+            std::abort();
+        }
+    });
+#else
+    sortdb->each([&write_snapshot_entry](const std::string_view db_key, const std::string_view db_value) {
+        auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
+        switch (entry_type) {
+        case log_entry::entry_type::normal_entry:
+            write_snapshot_entry(db_key, db_value.substr(1));
+            break;
+        case log_entry::entry_type::remove_entry:
+            break;  // skip
+        default:
+            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
+            std::abort();
+        }
+    });
+#endif
+}
+
+}
+
+namespace limestone::api {
+using namespace limestone::internal;
+
+void datastore::create_snapshot() {
+    const auto& from_dir = location_;
+    auto [max_appeared_epoch, sortdb] = create_sortdb_from_wals(from_dir, recover_max_parallelism_);
+    epoch_id_switched_.store(max_appeared_epoch);
+    epoch_id_informed_.store(max_appeared_epoch);
 
     boost::filesystem::path sub_dir = location_ / boost::filesystem::path(std::string(snapshot::subdirectory_name_));
     boost::system::error_code error;
@@ -142,50 +196,8 @@ void datastore::create_snapshot() {
         throw std::runtime_error("I/O error");
     }
     setvbuf(ostrm, nullptr, _IOFBF, 128L * 1024L);  // NOLINT, NB. glibc may ignore size when _IOFBF and buffer=NULL
-    static_assert(sizeof(log_entry::entry_type) == 1);
-#if defined SORT_METHOD_PUT_ONLY
-    sortdb->each([&ostrm, last_key = std::string{}](std::string_view db_key, std::string_view db_value) mutable {
-        // using the first entry in GROUP BY (original-)key
-        // NB: max versions comes first (by the custom-comparator)
-        std::string_view key(db_key.data() + write_version_size, db_key.size() - write_version_size);
-        if (key == last_key) {  // same (original-)key with prev
-            return; // skip
-        }
-        last_key.assign(key);
-
-        auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
-        switch (entry_type) {
-        case log_entry::entry_type::normal_entry: {
-            std::string value(write_version_size + db_value.size() - 1, '\0');
-            store_bswap64_value(&value[0], &db_key[0]);
-            store_bswap64_value(&value[8], &db_key[8]);
-            std::memcpy(&value[write_version_size], &db_value[1], db_value.size() - 1);
-            log_entry::write(ostrm, key, value);
-            break;
-        }
-        case log_entry::entry_type::remove_entry:
-            break;  // skip
-        default:
-            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
-            std::abort();
-        }
-    });
-#else
-    sortdb->each([&ostrm](std::string_view db_key, std::string_view db_value) {
-        auto entry_type = static_cast<log_entry::entry_type>(db_value[0]);
-        db_value.remove_prefix(1);
-        switch (entry_type) {
-        case log_entry::entry_type::normal_entry:
-            log_entry::write(ostrm, db_key, db_value);
-            break;
-        case log_entry::entry_type::remove_entry:
-            break;  // skip
-        default:
-            LOG(ERROR) << "never reach " << static_cast<int>(entry_type);
-            std::abort();
-        }
-    });
-#endif
+    auto write_snapshot_entry = [&ostrm](std::string_view key, std::string_view value){log_entry::write(ostrm, key, value);};
+    sortdb_foreach(sortdb.get(), write_snapshot_entry);
     if (fclose(ostrm) != 0) {  // NOLINT(*-owning-memory)
         LOG_LP(ERROR) << "cannot close snapshot file (" << snapshot_file << "), errno = " << errno;
         throw std::runtime_error("I/O error");
