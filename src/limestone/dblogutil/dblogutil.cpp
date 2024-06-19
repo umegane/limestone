@@ -15,6 +15,7 @@
  */
 
 #include <iostream>
+#include <stdlib.h>  // NOLINT(*-deprecated-headers): <cstdlib> does not provide std::mkdtemp
 #include <glog/logging.h>
 #include <limestone/logging.h>
 #include "logging_helper.h"
@@ -154,8 +155,67 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     }
 }
 
+boost::filesystem::path make_work_dir_next_to(const boost::filesystem::path& target_dir) {
+    // assume: already checked existence and is_dir
+
+    auto tmpdirname = boost::filesystem::canonical(target_dir).string() + ".work_XXXXXX";
+    if (::mkdtemp(tmpdirname.data()) == nullptr) {
+        LOG_LP(ERROR) << "mkdtemp failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    return {tmpdirname};
+}
+
 void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
-    LOG(ERROR) << "unimplemented";
+    epoch_id_type ld_epoch{};
+    if (epoch.has_value()) {
+        ld_epoch = epoch.value();
+    } else {
+        try {
+            ld_epoch = ds.last_durable_epoch_in_dir();
+        } catch (std::runtime_error& ex) {
+            LOG(ERROR) << "reading epoch file is failed: " << ex.what();
+            log_and_exit(64);
+        }
+        std::cout << "durable-epoch: " << ld_epoch << std::endl;
+    }
+    auto from_dir = ds.get_dblogdir();
+    auto tmp = make_work_dir_next_to(from_dir);
+    // TODO: prompt
+    setup_initial_logdir(tmp);
+    VLOG_LP(log_info) << "making compact pwal file to " << tmp;
+    create_comapct_pwal(from_dir, tmp, FLAGS_thread_num);
+
+    // epoch file
+    VLOG_LP(log_info) << "making compact epoch file to " << tmp;
+    FILE* strm = fopen((tmp / "epoch").c_str(), "a");  // NOLINT(*-owning-memory)
+    if (!strm) {
+        LOG_LP(ERROR) << "fopen failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    // TODO: if to-flat mode, set ld_epoch := 1
+    log_entry::durable_epoch(strm, ld_epoch);
+    if (fflush(strm) != 0) {
+        LOG_LP(ERROR) << "fflush failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    if (fsync(fileno(strm)) != 0) {
+        LOG_LP(ERROR) << "fsync failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    if (fclose(strm) != 0) {  // NOLINT(*-owning-memory)
+        LOG_LP(ERROR) << "fclose failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+
+    // swap dir-name
+    auto backup_dir = ds.get_dblogdir();
+    auto bakdir = (from_dir / ".." / "bak").lexically_normal();
+    boost::filesystem::rename(from_dir, bakdir);
+    VLOG_LP(log_info) << "renaming " << tmp << " to " << from_dir;
+    boost::filesystem::rename(tmp, from_dir);
+
+    std::cout << "compaction was successfully completed: " << from_dir << std::endl;
 }
 
 int main(char *dir, subcommand mode) {  // NOLINT

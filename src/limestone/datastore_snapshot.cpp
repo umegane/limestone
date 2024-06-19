@@ -166,6 +166,48 @@ static void sortdb_foreach(sortdb_wrapper *sortdb, std::function<void(const std:
 #endif
 }
 
+void create_comapct_pwal(const boost::filesystem::path& from_dir, const boost::filesystem::path& to_dir, int num_worker) {
+    auto [max_appeared_epoch, sortdb] = create_sortdb_from_wals(from_dir, num_worker);
+
+    boost::system::error_code error;
+    const bool result_check = boost::filesystem::exists(to_dir, error);
+    if (!result_check || error) {
+        const bool result_mkdir = boost::filesystem::create_directory(to_dir, error);
+        if (!result_mkdir || error) {
+            LOG_LP(ERROR) << "fail to create directory " << to_dir;
+            throw std::runtime_error("I/O error");
+        }
+    }
+
+    boost::filesystem::path snapshot_file = to_dir / boost::filesystem::path("pwal_0000.compacted");
+    VLOG_LP(log_info) << "generating compacted pwal file: " << snapshot_file;
+    FILE* ostrm = fopen(snapshot_file.c_str(), "w");  // NOLINT(*-owning-memory)
+    if (!ostrm) {
+        LOG_LP(ERROR) << "cannot create snapshot file (" << snapshot_file << ")";
+        throw std::runtime_error("I/O error");
+    }
+    setvbuf(ostrm, nullptr, _IOFBF, 128L * 1024L);  // NOLINT, NB. glibc may ignore size when _IOFBF and buffer=NULL
+    bool rewind = true;  // TODO: change by flag
+    epoch_id_type epoch = rewind ? 0 : max_appeared_epoch;
+    log_entry::begin_session(ostrm, epoch);
+    auto write_snapshot_entry = [&ostrm, &rewind](std::string_view key_stid, std::string_view value_etc) {
+        if (rewind) {
+            static std::string value{};
+            value = value_etc;
+            std::memset(value.data(), 0, 16);
+            log_entry::write(ostrm, key_stid, value);
+        } else {
+            log_entry::write(ostrm, key_stid, value_etc);
+        }
+    };
+    sortdb_foreach(sortdb.get(), write_snapshot_entry);
+    //log_entry::end_session(ostrm, epoch);
+    if (fclose(ostrm) != 0) {  // NOLINT(*-owning-memory)
+        LOG_LP(ERROR) << "cannot close snapshot file (" << snapshot_file << "), errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+}
+
 }
 
 namespace limestone::api {
