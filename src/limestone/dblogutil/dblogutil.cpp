@@ -32,6 +32,7 @@ using namespace limestone::internal;
 DEFINE_string(epoch, "", "specify valid epoch upper limit");
 DEFINE_int32(thread_num, 1, "specify thread num of scanning wal file");
 DEFINE_bool(h, false, "display help message");
+DEFINE_bool(verbose, false, "verbose");
 
 // inspect, repair
 DEFINE_bool(cut, false, "repair by cutting for error-truncate and error-broken");
@@ -230,6 +231,11 @@ void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
 }
 
 int main(char *dir, subcommand mode) {  // NOLINT
+    if (FLAGS_verbose) {
+        if (FLAGS_v < log_info) {
+            FLAGS_v = log_info;
+        }
+    }
     std::optional<epoch_id_type> opt_epoch;
     if (FLAGS_epoch.empty()) {
         opt_epoch = std::nullopt;

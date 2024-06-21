@@ -18,6 +18,8 @@ Options:
     * Number (default `1`) of concurrent processing thread of reading log files
 * `--working-dir=</path/to/working-dir>`
     * Directory for storing temporary files (default is a uniquely named directory next to `dblogdir`)
+* `--verbose=<bool>`
+    * Verbose mode (default `false`)
 * `--epoch=<epoch>`
     * Upper limit epoch number to be accepted as valid data (default is the value recorded in the transaction log directory)
 
