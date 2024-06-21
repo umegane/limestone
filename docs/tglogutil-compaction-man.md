@@ -14,6 +14,8 @@ Reorganize the transaction log data specified by `<dblogdir>`.
 Specify the location set in the `log_location` parameter in the `[datastore]` section of the configuration file of Tsurugi server (`tsurugi.ini`).
 
 Options:
+* `--force=<bool>`
+    * If `true`, do not prompt before processing (default `false`)
 * `--thread-num=<number>`
     * Number (default `1`) of concurrent processing thread of reading log files
 * `--working-dir=</path/to/working-dir>`

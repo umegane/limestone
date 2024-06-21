@@ -105,7 +105,7 @@ extern constexpr const std::string_view data_case1_pwalcompact =
 
 extern const std::string_view data_case1_epochcompact = epoch_0x100_str;
 
-TEST_F(dblogutil_compaction_test, case1) {
+TEST_F(dblogutil_compaction_test, case1force) {
     boost::filesystem::path dir{location};
     dir /= "log";
     boost::filesystem::create_directory(dir);
@@ -114,10 +114,29 @@ TEST_F(dblogutil_compaction_test, case1) {
     create_file(dir / "pwal_0000", data_case1_pwal0);
     create_file(dir / "pwal_0001", data_case1_pwal1);
     std::string command;
-    command = UTIL_COMMAND " compaction " + dir.string() + " 2>&1";
+    command = UTIL_COMMAND " compaction --force " + dir.string() + " 2>&1";
     std::string out;
     int rc = invoke(command, out);
     EXPECT_GE(rc, 0 << 8);
+    EXPECT_TRUE(contains(out, "compaction was successfully completed: "));
+    EXPECT_EQ(read_entire_file(list_dir(dir)[0]), data_case1_pwalcompact);
+    EXPECT_EQ(read_entire_file(dir / "epoch"), data_case1_epochcompact);
+}
+
+TEST_F(dblogutil_compaction_test, case1prompt) {
+    boost::filesystem::path dir{location};
+    dir /= "log";
+    boost::filesystem::create_directory(dir);
+    create_file(dir / "epoch", data_case1_epoch);
+    create_file(dir / std::string(manifest_file_name), data_manifest());
+    create_file(dir / "pwal_0000", data_case1_pwal0);
+    create_file(dir / "pwal_0001", data_case1_pwal1);
+    std::string command;
+    command = "echo y | " UTIL_COMMAND " compaction " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 0 << 8);
+    EXPECT_TRUE(contains(out, "y/N"));
     EXPECT_TRUE(contains(out, "compaction was successfully completed: "));
     EXPECT_EQ(read_entire_file(list_dir(dir)[0]), data_case1_pwalcompact);
     EXPECT_EQ(read_entire_file(dir / "epoch"), data_case1_epochcompact);

@@ -40,6 +40,7 @@ DEFINE_string(rotate, "all", "rotate files");
 DEFINE_string(output_format, "human-readable", "format of output (human-readable/machine-readable)");
 
 // compaction
+DEFINE_bool(force, false, "(subcommand compaction) skip start prompt");
 DEFINE_string(working_dir, "", "(subcommand compaction) working directory");
 
 enum subcommand {
@@ -193,8 +194,19 @@ void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     }
     std::cout << "working-directory: " << tmp << std::endl;
 
-    // TODO: prompt
+    if (!FLAGS_force) {
+        // prompt
+        char yn = 'N';
+        std::cout << "execute? (y/N) ";
+        std::cin >> yn;
+        if (yn != 'y' && yn != 'Y') {
+            LOG(ERROR) << "aborted";
+            log_and_exit(0);
+        }
+    }
+
     setup_initial_logdir(tmp);
+
     VLOG_LP(log_info) << "making compact pwal file to " << tmp;
     create_comapct_pwal(from_dir, tmp, FLAGS_thread_num);
 
