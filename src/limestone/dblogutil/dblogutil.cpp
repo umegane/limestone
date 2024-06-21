@@ -38,6 +38,9 @@ DEFINE_bool(cut, false, "repair by cutting for error-truncate and error-broken")
 DEFINE_string(rotate, "all", "rotate files");
 DEFINE_string(output_format, "human-readable", "format of output (human-readable/machine-readable)");
 
+// compaction
+DEFINE_string(working_dir, "", "(subcommand compaction) working directory");
+
 enum subcommand {
     cmd_inspect,
     cmd_repair,
@@ -180,7 +183,15 @@ void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
         std::cout << "durable-epoch: " << ld_epoch << std::endl;
     }
     auto from_dir = ds.get_dblogdir();
-    auto tmp = make_work_dir_next_to(from_dir);
+    boost::filesystem::path tmp;
+    if (!FLAGS_working_dir.empty()) {
+        tmp = FLAGS_working_dir;
+        // TODO: check, error if exist and non-empty
+    } else {
+        tmp = make_work_dir_next_to(from_dir);
+    }
+    std::cout << "working-directory: " << tmp << std::endl;
+
     // TODO: prompt
     setup_initial_logdir(tmp);
     VLOG_LP(log_info) << "making compact pwal file to " << tmp;

@@ -16,6 +16,8 @@ Specify the location set in the `log_location` parameter in the `[datastore]` se
 Options:
 * `--thread-num=<number>`
     * Number (default `1`) of concurrent processing thread of reading log files
+* `--working-dir=</path/to/working-dir>`
+    * Directory for storing temporary files (default is a uniquely named directory next to `dblogdir`)
 * `--epoch=<epoch>`
     * Upper limit epoch number to be accepted as valid data (default is the value recorded in the transaction log directory)
 
