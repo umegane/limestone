@@ -142,4 +142,33 @@ TEST_F(dblogutil_compaction_test, case1prompt) {
     EXPECT_EQ(read_entire_file(dir / "epoch"), data_case1_epochcompact);
 }
 
+TEST_F(dblogutil_compaction_test, unreadable) {
+    // root can read directories w/o permissions
+    if (geteuid() == 0) { GTEST_SKIP() << "skip when run by root"; }
+
+    boost::filesystem::path dir{location};
+    dir /= "unreadable";
+    boost::filesystem::create_directory(dir);
+    boost::filesystem::permissions(dir, boost::filesystem::no_perms);  // drop dir permission
+    std::string command;
+    command = UTIL_COMMAND " compaction --force " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "Permission denied"));
+    boost::filesystem::permissions(dir, boost::filesystem::owner_all);
+}
+
+TEST_F(dblogutil_compaction_test, nondblogdir) {
+    boost::filesystem::path dir{location};  // assume empty dir
+    std::string command;
+    command = UTIL_COMMAND " compaction --force " + dir.string() + " 2>&1";
+    std::string out;
+    int rc = invoke(command, out);
+    EXPECT_GE(rc, 64 << 8);
+    EXPECT_TRUE(contains_line_starts_with(out, "E"));  // LOG(ERROR)
+    EXPECT_TRUE(contains(out, "unsupport"));
+}
+
 }  // namespace limestone::testing
