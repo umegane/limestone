@@ -42,6 +42,7 @@ DEFINE_string(output_format, "human-readable", "format of output (human-readable
 // compaction
 DEFINE_bool(force, false, "(subcommand compaction) skip start prompt");
 DEFINE_string(working_dir, "", "(subcommand compaction) working directory");
+DEFINE_bool(make_backup, false, "(subcommand compaction) make backup of target dblogdir");
 
 enum subcommand {
     cmd_inspect,
@@ -160,15 +161,22 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     }
 }
 
-boost::filesystem::path make_work_dir_next_to(const boost::filesystem::path& target_dir) {
-    // assume: already checked existence and is_dir
-
-    auto tmpdirname = boost::filesystem::canonical(target_dir).string() + ".work_XXXXXX";
+static boost::filesystem::path make_tmp_dir_next_to(const boost::filesystem::path& target_dir, const char* suffix) {
+    auto tmpdirname = boost::filesystem::canonical(target_dir).string() + suffix;
     if (::mkdtemp(tmpdirname.data()) == nullptr) {
         LOG_LP(ERROR) << "mkdtemp failed, errno = " << errno;
         throw std::runtime_error("I/O error");
     }
     return {tmpdirname};
+}
+
+static boost::filesystem::path make_work_dir_next_to(const boost::filesystem::path& target_dir) {
+    // assume: already checked existence and is_dir
+    return make_tmp_dir_next_to(target_dir, ".work_XXXXXX");
+}
+
+static boost::filesystem::path make_backup_dir_next_to(const boost::filesystem::path& target_dir) {
+    return make_tmp_dir_next_to(target_dir, ".backup_XXXXXX");
 }
 
 void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
@@ -232,10 +240,14 @@ void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
         throw std::runtime_error("I/O error");
     }
 
-    // swap dir-name
-    auto backup_dir = ds.get_dblogdir();
-    auto bakdir = (from_dir / ".." / "bak").lexically_normal();
-    boost::filesystem::rename(from_dir, bakdir);
+    if (FLAGS_make_backup) {
+        auto bkdir = make_backup_dir_next_to(from_dir);
+        VLOG_LP(log_info) << "renaming " << from_dir << " to " << bkdir << " for backup";
+        boost::filesystem::rename(from_dir, bkdir);
+    } else {
+        VLOG_LP(log_info) << "deleting " << from_dir;
+        boost::filesystem::remove_all(from_dir);
+    }
     VLOG_LP(log_info) << "renaming " << tmp << " to " << from_dir;
     boost::filesystem::rename(tmp, from_dir);
 

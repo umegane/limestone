@@ -24,6 +24,8 @@ Options:
     * Verbose mode (default `false`)
 * `--epoch=<epoch>`
     * Upper limit epoch number to be accepted as valid data (default is the value recorded in the transaction log directory)
+* `--make-backup=<bool>`
+    * Keep a backup of original data. If `false`, the contents of dblogdir will be removed (default `false`)
 
 ## EXIT STATUS
 
