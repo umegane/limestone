@@ -15,6 +15,7 @@
  */
 
 #include <iostream>
+#include <stdlib.h>  // NOLINT(*-deprecated-headers): <cstdlib> does not provide std::mkdtemp
 #include <glog/logging.h>
 #include <limestone/logging.h>
 #include "logging_helper.h"
@@ -27,13 +28,28 @@
 using namespace limestone::api;
 using namespace limestone::internal;
 
+// common options
 DEFINE_string(epoch, "", "specify valid epoch upper limit");
 DEFINE_int32(thread_num, 1, "specify thread num of scanning wal file");
+DEFINE_bool(h, false, "display help message");
+DEFINE_bool(verbose, false, "verbose");
+
+// inspect, repair
 DEFINE_bool(cut, false, "repair by cutting for error-truncate and error-broken");
 DEFINE_string(rotate, "all", "rotate files");
 DEFINE_string(output_format, "human-readable", "format of output (human-readable/machine-readable)");
 
-enum subcommand { cmd_inspect, cmd_repair };
+// compaction
+DEFINE_bool(force, false, "(subcommand compaction) skip start prompt");
+DEFINE_bool(dry_run, false, "(subcommand compaction) dry run");
+DEFINE_string(working_dir, "", "(subcommand compaction) working directory");
+DEFINE_bool(make_backup, false, "(subcommand compaction) make backup of target dblogdir");
+
+enum subcommand {
+    cmd_inspect,
+    cmd_repair,
+    cmd_compaction,
+};
 
 void log_and_exit(int error) {
     VLOG(10) << "exiting with code " << error;
@@ -146,7 +162,112 @@ void repair(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     }
 }
 
+static boost::filesystem::path make_tmp_dir_next_to(const boost::filesystem::path& target_dir, const char* suffix) {
+    auto tmpdirname = boost::filesystem::canonical(target_dir).string() + suffix;
+    if (::mkdtemp(tmpdirname.data()) == nullptr) {
+        LOG_LP(ERROR) << "mkdtemp failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    return {tmpdirname};
+}
+
+static boost::filesystem::path make_work_dir_next_to(const boost::filesystem::path& target_dir) {
+    // assume: already checked existence and is_dir
+    return make_tmp_dir_next_to(target_dir, ".work_XXXXXX");
+}
+
+static boost::filesystem::path make_backup_dir_next_to(const boost::filesystem::path& target_dir) {
+    return make_tmp_dir_next_to(target_dir, ".backup_XXXXXX");
+}
+
+void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
+    epoch_id_type ld_epoch{};
+    if (epoch.has_value()) {
+        ld_epoch = epoch.value();
+    } else {
+        try {
+            ld_epoch = ds.last_durable_epoch_in_dir();
+        } catch (std::runtime_error& ex) {
+            LOG(ERROR) << "reading epoch file is failed: " << ex.what();
+            log_and_exit(64);
+        }
+        std::cout << "durable-epoch: " << ld_epoch << std::endl;
+    }
+    auto from_dir = ds.get_dblogdir();
+    boost::filesystem::path tmp;
+    if (!FLAGS_working_dir.empty()) {
+        tmp = FLAGS_working_dir;
+        // TODO: check, error if exist and non-empty
+    } else {
+        tmp = make_work_dir_next_to(from_dir);
+    }
+    std::cout << "working-directory: " << tmp << std::endl;
+
+    if (!FLAGS_force) {
+        // prompt
+        char yn = 'N';
+        std::cout << "execute? (y/N) ";
+        std::cin >> yn;
+        if (yn != 'y' && yn != 'Y') {
+            LOG(ERROR) << "aborted";
+            log_and_exit(0);
+        }
+    }
+
+    setup_initial_logdir(tmp);
+
+    VLOG_LP(log_info) << "making compact pwal file to " << tmp;
+    create_comapct_pwal(from_dir, tmp, FLAGS_thread_num);
+
+    // epoch file
+    VLOG_LP(log_info) << "making compact epoch file to " << tmp;
+    FILE* strm = fopen((tmp / "epoch").c_str(), "a");  // NOLINT(*-owning-memory)
+    if (!strm) {
+        LOG_LP(ERROR) << "fopen failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    // TODO: if to-flat mode, set ld_epoch := 1
+    log_entry::durable_epoch(strm, ld_epoch);
+    if (fflush(strm) != 0) {
+        LOG_LP(ERROR) << "fflush failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    if (fsync(fileno(strm)) != 0) {
+        LOG_LP(ERROR) << "fsync failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+    if (fclose(strm) != 0) {  // NOLINT(*-owning-memory)
+        LOG_LP(ERROR) << "fclose failed, errno = " << errno;
+        throw std::runtime_error("I/O error");
+    }
+
+    if (FLAGS_dry_run) {
+        std::cout << "compaction will be successfully completed (dry-run mode)" << std::endl;
+        VLOG_LP(log_info) << "deleting work directory " << tmp;
+        boost::filesystem::remove_all(tmp);
+        return;
+    }
+
+    if (FLAGS_make_backup) {
+        auto bkdir = make_backup_dir_next_to(from_dir);
+        VLOG_LP(log_info) << "renaming " << from_dir << " to " << bkdir << " for backup";
+        boost::filesystem::rename(from_dir, bkdir);
+    } else {
+        VLOG_LP(log_info) << "deleting " << from_dir;
+        boost::filesystem::remove_all(from_dir);
+    }
+    VLOG_LP(log_info) << "renaming " << tmp << " to " << from_dir;
+    boost::filesystem::rename(tmp, from_dir);
+
+    std::cout << "compaction was successfully completed: " << from_dir << std::endl;
+}
+
 int main(char *dir, subcommand mode) {  // NOLINT
+    if (FLAGS_verbose) {
+        if (FLAGS_v < log_info) {
+            FLAGS_v = log_info;
+        }
+    }
     std::optional<epoch_id_type> opt_epoch;
     if (FLAGS_epoch.empty()) {
         opt_epoch = std::nullopt;
@@ -175,6 +296,7 @@ int main(char *dir, subcommand mode) {  // NOLINT
         ds.set_thread_num(FLAGS_thread_num);
         if (mode == cmd_inspect) inspect(ds, opt_epoch);
         if (mode == cmd_repair) repair(ds, opt_epoch);
+        if (mode == cmd_compaction) compaction(ds, opt_epoch);
     } catch (std::runtime_error& e) {
         LOG(ERROR) << e.what();
         log_and_exit(64);
@@ -185,16 +307,24 @@ int main(char *dir, subcommand mode) {  // NOLINT
 }
 
 int main(int argc, char *argv[]) {  // NOLINT
+    gflags::SetUsageMessage("Tsurugi dblog maintenance command\n\n"
+                            //"usage: tglogutil {inspect | repair | compaction} [options] <dblogdir>"
+                            "usage: tglogutil {repair | compaction} [options] <dblogdir>"
+                            );
     FLAGS_logtostderr = true;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     const char *arg0 = argv[0];  // NOLINT(*-pointer-arithmetic)
     google::InitGoogleLogging(arg0);
     subcommand mode{};
     auto usage = [&arg0]() {
-        //std::cout << "usage: " << arg0 << " {inspect | repair} [options] <dblogdir>" << std::endl;
-        std::cout << "usage: " << arg0 << " repair [options] <dblogdir>" << std::endl;
+        //std::cout << "usage: " << arg0 << " {inspect | repair | compaction} [options] <dblogdir>" << std::endl;
+        std::cout << "usage: " << arg0 << " {repair | compaction} [options] <dblogdir>" << std::endl;
         log_and_exit(1);
     };
+    if (FLAGS_h) {
+        gflags::ShowUsageWithFlags(arg0);
+        exit(1);
+    }
     if (argc < 3) {
         LOG(ERROR) << "missing parameters";
         usage();
@@ -205,6 +335,8 @@ int main(int argc, char *argv[]) {  // NOLINT
         mode = cmd_inspect;
     } else if (strcmp(arg1, "repair") == 0) {
         mode = cmd_repair;
+    } else if (strcmp(arg1, "compaction") == 0) {
+        mode = cmd_compaction;
     } else {
         LOG(ERROR) << "unknown subcommand: " << arg1;
         usage();

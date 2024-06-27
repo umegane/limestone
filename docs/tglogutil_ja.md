@@ -2,6 +2,8 @@
 
 * 2024-04-10 ban
     * for 1.0.0-BETA4
+* 2024-06-22 ban
+    * for 1.0.0-BETA5, compaction サブコマンド
 
 ## この文書について
 
@@ -26,6 +28,7 @@
 ## 機能一覧 (サブコマンド)
 
 * repair: 永続化データディレクトリの内容を修復する.
+* compaction: 永続化データディレクトリの内容を再編し冗長な情報を削除する.
 
 ### サブコマンド repair (自動修復)
 
@@ -63,3 +66,12 @@ $ tglogutil repair [options] <dblogdir>
 
 使用上の注意
 * データの書き換えを伴うため, ディレクトリのバックアップを取っておくことが望ましい.
+
+### サブコマンド compaction
+
+```
+$ tglogutil compaction [options] <dblogdir>
+```
+
+詳細は [](tglogutil-compaction-man.md) を参照のこと
+

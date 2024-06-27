@@ -86,6 +86,7 @@ public:
     explicit dblog_scan(const boost::filesystem::path& logdir) : dblogdir_(logdir) { }
     explicit dblog_scan(boost::filesystem::path&& logdir) : dblogdir_(std::move(logdir)) { }
 
+    const boost::filesystem::path& get_dblogdir() { return dblogdir_; }
     void set_thread_num(int thread_num) noexcept { thread_num_ = thread_num; }
     void set_fail_fast(bool fail_fast) noexcept { fail_fast_ = fail_fast; }
     void detach_wal_files(bool skip_empty_files = true);

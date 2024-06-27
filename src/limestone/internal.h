@@ -50,4 +50,8 @@ void check_logdir_format(const boost::filesystem::path& logdir);
 
 status purge_dir(const boost::filesystem::path& dir);
 
+// from datastore_snapshot.cpp
+
+void create_comapct_pwal(const boost::filesystem::path& from_dir, const boost::filesystem::path& to_dir, int num_worker);
+
 }
