@@ -41,6 +41,7 @@ DEFINE_string(output_format, "human-readable", "format of output (human-readable
 
 // compaction
 DEFINE_bool(force, false, "(subcommand compaction) skip start prompt");
+DEFINE_bool(dry_run, false, "(subcommand compaction) dry run");
 DEFINE_string(working_dir, "", "(subcommand compaction) working directory");
 DEFINE_bool(make_backup, false, "(subcommand compaction) make backup of target dblogdir");
 
@@ -238,6 +239,13 @@ void compaction(dblog_scan &ds, std::optional<epoch_id_type> epoch) {
     if (fclose(strm) != 0) {  // NOLINT(*-owning-memory)
         LOG_LP(ERROR) << "fclose failed, errno = " << errno;
         throw std::runtime_error("I/O error");
+    }
+
+    if (FLAGS_dry_run) {
+        std::cout << "compaction will be successfully completed (dry-run mode)" << std::endl;
+        VLOG_LP(log_info) << "deleting work directory " << tmp;
+        boost::filesystem::remove_all(tmp);
+        return;
     }
 
     if (FLAGS_make_backup) {

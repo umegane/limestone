@@ -16,6 +16,8 @@ Specify the location set in the `log_location` parameter in the `[datastore]` se
 Options:
 * `--force=<bool>`
     * If `true`, do not prompt before processing (default `false`)
+* `--dry-run=<bool>`
+    * Dry run mode. If `true`, transaction log files are not modified (default `false`)
 * `--thread-num=<number>`
     * Number (default `1`) of concurrent processing thread of reading log files
 * `--working-dir=</path/to/working-dir>`
